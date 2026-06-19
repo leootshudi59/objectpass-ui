@@ -1,0 +1,89 @@
+export type DeviceStatus = 'excellent' | 'bon' | 'attention' | 'panne';
+
+export interface Repair {
+  id: string;
+  date: string;
+  type: string;
+  repairer: string;
+  certified: boolean;
+}
+
+export interface Device {
+  id: string;
+  name: string;
+  model: string;
+  category: 'laptop' | 'phone' | 'ebike' | 'tablet' | 'other';
+  healthScore: number;
+  status: DeviceStatus;
+  lastRepairDate: string | null;
+  warrantyActive: boolean;
+  warrantyExpiry: string | null;
+  repairs: Repair[];
+  battery: number;
+  screen: number;
+  storage: number;
+}
+
+export const mockDevices: Device[] = [
+  {
+    id: '1',
+    name: 'MacBook Pro M1',
+    model: '2022 · 16"',
+    category: 'laptop',
+    healthScore: 87,
+    status: 'bon',
+    lastRepairDate: 'Juin 2025',
+    warrantyActive: true,
+    warrantyExpiry: 'Juin 2026',
+    battery: 91,
+    screen: 100,
+    storage: 68,
+    repairs: [
+      {
+        id: 'r1',
+        date: '12 juin 2025',
+        type: 'Remplacement batterie',
+        repairer: 'iRepair Paris 11e',
+        certified: true,
+      },
+    ],
+  },
+  {
+    id: '2',
+    name: 'iPhone 15 Pro',
+    model: '2023 · 256 Go',
+    category: 'phone',
+    healthScore: 94,
+    status: 'excellent',
+    lastRepairDate: 'Avr. 2024',
+    warrantyActive: true,
+    warrantyExpiry: 'Avr. 2026',
+    battery: 98,
+    screen: 100,
+    storage: 82,
+    repairs: [
+      {
+        id: 'r2',
+        date: '8 avril 2024',
+        type: 'Remplacement écran',
+        repairer: 'Apple Store Opéra',
+        certified: true,
+      },
+    ],
+  },
+  {
+    id: '3',
+    name: 'Cowboy C5',
+    model: '2023 · Vélo électrique',
+    category: 'ebike',
+    healthScore: 72,
+    status: 'attention',
+    lastRepairDate: null,
+    warrantyActive: false,
+    warrantyExpiry: null,
+    battery: 74,
+    screen: 88,
+    storage: 100,
+    repairs: [],
+  },
+];

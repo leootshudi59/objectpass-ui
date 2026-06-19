@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "ObjectPass",
+    "slug": "objectpass",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#0E2530"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.objectpass.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0E2530"
+      },
+      "package": "com.objectpass.app"
+    }
+  }
+}
