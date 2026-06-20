@@ -5,6 +5,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { HomeScreen } from '../screens/HomeScreen';
+import { DiagnosticScreen } from '../screens/DiagnosticScreen';
 
 // ── Placeholder screens (not yet built) ────────────────────────────────────────
 
@@ -47,7 +48,7 @@ export function RootNavigator() {
             if (route.name === 'Ajouter') {
               return (
                 <View style={[styles.addIcon, focused && styles.addIconActive]}>
-                  <Feather name="plus" size={22} color={Colors.cleanWhite} />
+                  <Feather name="plus" size={28} color={Colors.cleanWhite} />
                 </View>
               );
             }
@@ -56,7 +57,7 @@ export function RootNavigator() {
         })}
       >
         <Tab.Screen name="Accueil"     component={HomeScreen} />
-        <Tab.Screen name="Diagnostic"  component={() => <Placeholder label="Diagnostic" />} />
+        <Tab.Screen name="Diagnostic"  component={DiagnosticScreen} />
         <Tab.Screen
           name="Ajouter"
           component={() => <Placeholder label="Ajouter un appareil" />}
@@ -75,9 +76,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cleanWhite,
     borderTopColor: Colors.borderMist,
     borderTopWidth: 1,
-    height: 64,
-    paddingBottom: 10,
+    height: 76,
+    paddingBottom: 12,
     paddingTop: 6,
+    overflow: 'visible',
   },
   tabLabel: {
     fontSize: 10,
@@ -85,13 +87,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   addIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: Colors.repairTeal,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    transform: [{ translateY: -16 }],
     shadowColor: Colors.repairTeal,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,

@@ -1,12 +1,11 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import {
-  Animated,
-  FlatList,
   Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -46,12 +45,6 @@ function computeStats(devices: Device[]) {
 
 export function HomeScreen() {
   const { total, repairsThisYear, activeWarranties } = computeStats(mockDevices);
-  const fabScale = useRef(new Animated.Value(1)).current;
-
-  const onFabPressIn = () =>
-    Animated.timing(fabScale, { toValue: 0.92, duration: 100, useNativeDriver: true }).start();
-  const onFabPressOut = () =>
-    Animated.timing(fabScale, { toValue: 1, duration: 150, useNativeDriver: true }).start();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -87,15 +80,9 @@ export function HomeScreen() {
         </ScrollView>
 
         {/* ── FAB ───────────────────────────────────────────────────────── */}
-        <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
-          <Pressable
-            style={styles.fabInner}
-            onPressIn={onFabPressIn}
-            onPressOut={onFabPressOut}
-          >
-            <Feather name="plus" size={26} color={Colors.cleanWhite} />
-          </Pressable>
-        </Animated.View>
+        <TouchableOpacity style={styles.fab} activeOpacity={0.85}>
+          <Feather name="plus" size={26} color={Colors.cleanWhite} />
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -177,20 +164,18 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 28,
-    right: 20,
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.repairTeal,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: Colors.repairTeal,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 6,
-  },
-  fabInner: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: Colors.repairTeal,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
