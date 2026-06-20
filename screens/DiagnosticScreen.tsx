@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { Colors, healthColor } from '../constants/colors';
 import { mockDevices, Device } from '../data/mockDevices';
 import { PrimaryButton, OutlineButton, StatusBadge } from '../components/ui';
@@ -87,6 +88,7 @@ function SelectableDeviceRow({
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
 export function DiagnosticScreen() {
+  const navigation = useNavigation<any>();
   const [step, setStep] = useState(0);
   const [selectedDeviceId, setSelectedDeviceId]   = useState<string | null>(null);
   const [selectedSymptomId, setSelectedSymptomId] = useState<string | null>(null);
@@ -284,7 +286,21 @@ export function DiagnosticScreen() {
           </Animated.View>
 
           <View style={styles.resultActions}>
-            <PrimaryButton label="Voir les réparateurs disponibles" fullWidth />
+            <PrimaryButton
+              label="Voir les réparateurs disponibles"
+              fullWidth
+              onPress={() => {
+                const device = mockDevices.find((d) => d.id === selectedDeviceId);
+                if (!device || !result) return;
+                navigation.navigate('Repairers', {
+                  deviceName: device.name,
+                  deviceModel: device.model,
+                  issueLabel: result.label,
+                  priceRange: result.priceRange,
+                  urgency: result.urgency,
+                });
+              }}
+            />
             <OutlineButton label="Ajouter au passeport" fullWidth />
           </View>
 

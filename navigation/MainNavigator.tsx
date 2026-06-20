@@ -1,11 +1,28 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { HomeScreen } from '../screens/HomeScreen';
 import { DiagnosticScreen } from '../screens/DiagnosticScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { RepairersScreen } from '../screens/RepairersScreen';
+
+// ── Navigation types ───────────────────────────────────────────────────────────
+
+export type MainStackParamList = {
+  Tabs: undefined;
+  Repairers: {
+    deviceName: string;
+    deviceModel: string;
+    issueLabel: string;
+    priceRange: string;
+    urgency: string;
+  };
+};
+
+// ── Placeholders ───────────────────────────────────────────────────────────────
 
 function Placeholder({ label }: { label: string }) {
   return (
@@ -20,9 +37,11 @@ const ph = StyleSheet.create({
   text: { fontSize: 16, color: Colors.steelGrey, fontWeight: '600' },
 });
 
+// ── Tab navigator (inner) ──────────────────────────────────────────────────────
+
 const Tab = createBottomTabNavigator();
 
-export function MainNavigator() {
+function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -43,7 +62,7 @@ export function MainNavigator() {
           if (route.name === 'Ajouter') {
             return (
               <View style={[styles.addIcon, focused && styles.addIconActive]}>
-                <Feather name="plus" size={28} color={Colors.cleanWhite} />
+                <Feather name="plus" size={32} color={Colors.cleanWhite} />
               </View>
             );
           }
@@ -68,13 +87,32 @@ export function MainNavigator() {
   );
 }
 
+// ── Main stack (tabs + full-screen overlays) ───────────────────────────────────
+
+const Stack = createNativeStackNavigator<MainStackParamList>();
+
+export function MainNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Tabs" component={TabNavigator} />
+      <Stack.Screen
+        name="Repairers"
+        component={RepairersScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+// ── Styles ─────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: Colors.cleanWhite,
     borderTopColor: Colors.borderMist,
     borderTopWidth: 1,
-    height: 76,
-    paddingBottom: 12,
+    height: 72,
+    paddingBottom: 10,
     paddingTop: 6,
     overflow: 'visible',
   },
@@ -84,18 +122,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   addIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: Colors.repairTeal,
     alignItems: 'center',
     justifyContent: 'center',
-    transform: [{ translateY: -16 }],
+    transform: [{ translateY: -10 }],
     shadowColor: Colors.repairTeal,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   addIconActive: {
     backgroundColor: Colors.objectNavy,
