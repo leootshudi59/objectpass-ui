@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   FlatList,
   Pressable,
   SafeAreaView,
@@ -119,10 +118,8 @@ function StarRow({ rating, reviewCount }: { rating: number; reviewCount: number 
   );
 }
 
-function RepairerCard({ repairer }: { repairer: Repairer }) {
+function RepairerCard({ repairer, onReserve }: { repairer: Repairer; onReserve: () => void }) {
   const initials = getInitials(repairer.name);
-  const onReserve = () =>
-    Alert.alert('Bientôt disponible', 'Fonctionnalité bientôt disponible 🛠️');
 
   return (
     <View style={styles.card}>
@@ -189,11 +186,32 @@ function RepairerCard({ repairer }: { repairer: Repairer }) {
 export function RepairersScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<Route>();
-  const { deviceName, issueLabel, priceRange } = route.params;
+  const { deviceName, deviceModel, issueLabel, priceRange, urgency } = route.params;
 
   const [activeFilter, setActiveFilter] = useState('Tous');
 
   const subtitle = `${issueLabel} · ${deviceName}`;
+
+  const handleReserve = (repairer: Repairer) => {
+    navigation.navigate('Booking', {
+      repairer: {
+        name: repairer.name,
+        shop: repairer.shop,
+        rating: repairer.rating,
+        reviewCount: repairer.reviewCount,
+        certified: repairer.certified,
+        tags: repairer.tags,
+        price: repairer.price,
+      },
+      diagnosis: {
+        deviceName,
+        deviceModel,
+        issueLabel,
+        priceRange,
+        urgency,
+      },
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -236,7 +254,9 @@ export function RepairersScreen() {
       <FlatList
         data={REPAIRERS}
         keyExtractor={(r) => r.id}
-        renderItem={({ item }) => <RepairerCard repairer={item} />}
+        renderItem={({ item }) => (
+          <RepairerCard repairer={item} onReserve={() => handleReserve(item)} />
+        )}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />

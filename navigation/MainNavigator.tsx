@@ -8,11 +8,15 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { DiagnosticScreen } from '../screens/DiagnosticScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { RepairersScreen } from '../screens/RepairersScreen';
+import { BookingScreen } from '../screens/BookingScreen';
+import { AppointmentsScreen } from '../screens/AppointmentsScreen';
+import { AppointmentDetailScreen } from '../screens/AppointmentDetailScreen';
+import { useAppointments } from '../context/AppointmentsContext';
 
 // ── Navigation types ───────────────────────────────────────────────────────────
 
 export type MainStackParamList = {
-  Tabs: undefined;
+  Tabs: { screen?: string } | undefined;
   Repairers: {
     deviceName: string;
     deviceModel: string;
@@ -20,14 +24,35 @@ export type MainStackParamList = {
     priceRange: string;
     urgency: string;
   };
+  Booking: {
+    repairer: {
+      name: string;
+      shop: string;
+      rating: number;
+      reviewCount: number;
+      certified: boolean;
+      tags: string[];
+      price: string;
+    };
+    diagnosis: {
+      deviceName: string;
+      deviceModel: string;
+      issueLabel: string;
+      priceRange: string;
+      urgency: string;
+    };
+  };
+  AppointmentDetail: {
+    appointmentId: string;
+  };
 };
 
-// ── Placeholders ───────────────────────────────────────────────────────────────
+// ── Placeholder (Ajouter tab) ──────────────────────────────────────────────────
 
-function Placeholder({ label }: { label: string }) {
+function AddPlaceholder() {
   return (
     <View style={ph.container}>
-      <Text style={ph.text}>{label}</Text>
+      <Text style={ph.text}>Ajouter un appareil</Text>
     </View>
   );
 }
@@ -42,6 +67,9 @@ const ph = StyleSheet.create({
 const Tab = createBottomTabNavigator();
 
 function TabNavigator() {
+  const { appointments } = useAppointments();
+  const confirmedCount = appointments.filter((a) => a.status === 'confirmed').length;
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -50,18 +78,18 @@ function TabNavigator() {
         tabBarActiveTintColor: Colors.repairTeal,
         tabBarInactiveTintColor: Colors.steelGrey,
         tabBarLabelStyle: styles.tabLabel,
-        tabBarIcon: ({ color, size, focused }) => {
+        tabBarIcon: ({ color, size }) => {
           const icons: Record<string, string> = {
-            Accueil:     'home',
-            Diagnostic:  'activity',
-            Ajouter:     'plus',
-            Rendez_vous: 'calendar',
-            Profil:      'user',
+            Accueil:      'home',
+            Diagnostic:   'activity',
+            Ajouter:      'plus',
+            Rendez_vous:  'calendar',
+            Profil:       'user',
           };
           const name = icons[route.name] ?? 'circle';
           if (route.name === 'Ajouter') {
             return (
-              <View style={[styles.addIcon, focused && styles.addIconActive]}>
+              <View style={styles.addIcon}>
                 <Feather name="plus" size={32} color={Colors.cleanWhite} />
               </View>
             );
@@ -70,17 +98,20 @@ function TabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Accueil"    component={HomeScreen} />
+      <Tab.Screen name="Accueil"   component={HomeScreen} />
       <Tab.Screen name="Diagnostic" component={DiagnosticScreen} />
       <Tab.Screen
         name="Ajouter"
-        component={() => <Placeholder label="Ajouter un appareil" />}
+        component={AddPlaceholder}
         options={{ tabBarLabel: '' }}
       />
       <Tab.Screen
         name="Rendez_vous"
-        component={() => <Placeholder label="Rendez-vous" />}
-        options={{ tabBarLabel: 'Rendez-vous' }}
+        component={AppointmentsScreen}
+        options={{
+          tabBarLabel: 'Rendez-vous',
+          tabBarBadge: confirmedCount > 0 ? confirmedCount : undefined,
+        }}
       />
       <Tab.Screen name="Profil" component={ProfileScreen} />
     </Tab.Navigator>
@@ -98,6 +129,16 @@ export function MainNavigator() {
       <Stack.Screen
         name="Repairers"
         component={RepairersScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="Booking"
+        component={BookingScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="AppointmentDetail"
+        component={AppointmentDetailScreen}
         options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>
@@ -134,8 +175,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
-  },
-  addIconActive: {
-    backgroundColor: Colors.objectNavy,
   },
 });
