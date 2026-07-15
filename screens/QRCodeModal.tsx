@@ -7,17 +7,16 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, type NavigationProp, type RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 import { OutlineButton, PrimaryButton } from '../components/ui';
-
-type Params = { deviceId: string; name: string; serialNumber?: string };
+import type { RootStackParamList } from '../navigation/types';
 
 export function QRCodeModal() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
-  const { name, serialNumber } = route.params as Params;
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'QRCodeModal'>>();
+  const { name, serialNumber } = route.params;
   const insets = useSafeAreaInsets();
 
   return (

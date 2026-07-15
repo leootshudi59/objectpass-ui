@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { Repair } from '../../data/mockDevices';
+import type { Repair } from '../../types';
 import { ProofBadge } from './ProofBadge';
 
 interface Props {

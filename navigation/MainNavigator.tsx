@@ -1,9 +1,11 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { type NavigationProp } from '@react-navigation/native';
 import { StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import type { MainTabParamList, RootStackParamList } from './types';
 import { HomeScreen } from '../screens/HomeScreen';
 import { DiagnosticScreen } from '../screens/DiagnosticScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
@@ -17,47 +19,11 @@ import { QRCodeModal } from '../screens/QRCodeModal';
 import { CertificateScreen } from '../screens/CertificateScreen';
 import { useAppointments } from '../context/AppointmentsContext';
 
-// ── Navigation types ───────────────────────────────────────────────────────────
-
-export type MainStackParamList = {
-  Tabs: { screen?: string } | undefined;
-  Repairers: {
-    deviceName: string;
-    deviceModel: string;
-    issueLabel: string;
-    priceRange: string;
-    urgency: string;
-  };
-  Booking: {
-    repairer: {
-      name: string;
-      shop: string;
-      rating: number;
-      reviewCount: number;
-      certified: boolean;
-      tags: string[];
-      price: string;
-    };
-    diagnosis: {
-      deviceName: string;
-      deviceModel: string;
-      issueLabel: string;
-      priceRange: string;
-      urgency: string;
-    };
-  };
-  AppointmentDetail: {
-    appointmentId: string;
-  };
-  AddDevice: undefined;
-  DeviceDetail: { deviceId: string };
-  QRCodeModal: { deviceId: string; name: string; serialNumber?: string };
-  Certificate: { repairId: string };
-};
+export type { RootStackParamList, MainTabParamList };
 
 // ── Tab navigator ──────────────────────────────────────────────────────────────
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function TabNavigator() {
   const { appointments } = useAppointments();
@@ -100,7 +66,10 @@ function TabNavigator() {
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             e.preventDefault();
-            navigation.navigate('AddDevice');
+            const parent = navigation.getParent() as
+              | NavigationProp<RootStackParamList>
+              | undefined;
+            parent?.navigate('AddDevice');
           },
         })}
       />
@@ -119,7 +88,7 @@ function TabNavigator() {
 
 // ── Main stack ─────────────────────────────────────────────────────────────────
 
-const Stack = createNativeStackNavigator<MainStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function MainNavigator() {
   return (

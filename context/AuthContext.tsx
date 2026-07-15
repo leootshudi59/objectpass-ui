@@ -6,14 +6,11 @@ import React, {
   useReducer,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { User } from '../types';
+
+export type { User };
 
 const STORAGE_KEY = '@objectpass_auth';
-
-export interface User {
-  name: string;
-  email: string;
-  avatar: string | null;
-}
 
 interface AuthState {
   isLoggedIn: boolean;

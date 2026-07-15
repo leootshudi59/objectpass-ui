@@ -1,17 +1,8 @@
 import React, { createContext, useContext, useState } from 'react';
 import { mockDevices } from '../data/mockDevices';
-import type { Device } from '../data/mockDevices';
+import type { DeviceEntry } from '../types';
 
-export interface DeviceEntry extends Device {
-  serialNumber?: string;
-  purchaseDate?: string;
-  purchasePrice?: string;
-  purchasePlace?: string;
-  warrantyMonths?: number;
-  hasInvoice?: boolean;
-  color?: string;
-  createdAt?: string;
-}
+export type { DeviceEntry };
 
 interface DevicesContextValue {
   devices: DeviceEntry[];

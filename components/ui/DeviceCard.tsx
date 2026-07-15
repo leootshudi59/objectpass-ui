@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Colors, healthColor } from '../../constants/colors';
-import { Device } from '../../data/mockDevices';
+import type { Device } from '../../types';
 import { HealthScoreBadge } from './HealthScoreBadge';
 import { StatusBadge } from './StatusBadge';
 

@@ -1,18 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
+import type { Appointment } from '../types';
 
-export interface Appointment {
-  id: string;
-  status: 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
-  device: { name: string; model: string };
-  issue: { label: string; priceRange: string; urgency: string };
-  repairer: { name: string; shop: string; certified: boolean; rating: number };
-  date: string;
-  time: string;
-  type: string;
-  notes: string;
-  createdAt: string;
-  repairId?: string;
-}
+export type { Appointment };
 
 const MOCK_APPOINTMENTS: Appointment[] = [
   {

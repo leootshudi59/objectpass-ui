@@ -9,11 +9,13 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, type NavigationProp, type RouteProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../navigation/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, healthColor } from '../constants/colors';
 import { HealthScoreBadge, OutlineButton, PrimaryButton, SectionHeader } from '../components/ui';
 import { useDevices } from '../context/DevicesContext';
+import type { Certificate } from '../types';
 
 // ── Category emoji ─────────────────────────────────────────────────────────────
 
@@ -27,7 +29,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
 
 // ── Certificate mock data ──────────────────────────────────────────────────────
 
-const CERTIFICATES = {
+const CERTIFICATES: Record<string, Certificate> = {
   rep_001: {
     type: 'Remplacement batterie',
     date: '10 juin 2025',
@@ -35,7 +37,7 @@ const CERTIFICATES = {
     interventionType: 'En boutique',
     part: {
       name: 'Batterie MacBook Pro M1',
-      quality: 'premium' as 'premium' | 'standard',
+      quality: 'premium',
       reference: 'OEM-BAT-MBP2022',
     },
     warrantyMonths: 12,
@@ -56,7 +58,7 @@ const CERTIFICATES = {
       issuedAt: '10 juin 2025 à 15h42',
       blockchainHash: '0x8f3a2c...d94e1b',
       network: 'Polygon · ObjectPass Layer',
-      status: 'pending_anchor' as 'pending_anchor' | 'anchored',
+      status: 'pending_anchor',
     },
   },
   rep_002: {
@@ -66,7 +68,7 @@ const CERTIFICATES = {
     interventionType: 'En boutique',
     part: {
       name: 'Écran OLED iPhone 15 Pro',
-      quality: 'standard' as 'premium' | 'standard',
+      quality: 'standard',
       reference: 'SCR-IP15P-OLED-001',
     },
     warrantyMonths: 6,
@@ -86,7 +88,7 @@ const CERTIFICATES = {
       issuedAt: '5 novembre 2024 à 11h15',
       blockchainHash: '0x4e1b9a...c23d7f',
       network: 'Polygon · ObjectPass Layer',
-      status: 'anchored' as 'pending_anchor' | 'anchored',
+      status: 'anchored',
     },
   },
 };
@@ -120,13 +122,13 @@ const CELL_SIZE = 18;
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
 export function CertificateScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
-  const { repairId } = route.params as { repairId: string };
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'Certificate'>>();
+  const { repairId } = route.params;
   const { devices } = useDevices();
   const insets = useSafeAreaInsets();
 
-  const cert = CERTIFICATES[repairId as keyof typeof CERTIFICATES];
+  const cert: Certificate | undefined = CERTIFICATES[repairId];
   const device = devices.find((d) =>
     d.repairs.some((r) => r.repairId === repairId)
   );

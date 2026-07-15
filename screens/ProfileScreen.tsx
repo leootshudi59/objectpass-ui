@@ -11,13 +11,14 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, type NavigationProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../navigation/types';
 import { Colors, healthColor } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 import { useDevices } from '../context/DevicesContext';
 import { SectionHeader } from '../components/ui/SectionHeader';
 import { HealthScoreBadge } from '../components/ui/HealthScoreBadge';
-import type { DeviceEntry } from '../context/DevicesContext';
+import type { DeviceEntry } from '../types';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -161,7 +162,7 @@ const ACTIVITY_ITEMS = [
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
 export function ProfileScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { state, logout } = useAuth();
   const { devices } = useDevices();
   const user = state.user;
@@ -296,7 +297,7 @@ export function ProfileScreen() {
           <SectionHeader
             title="MES APPAREILS"
             action="Voir tout"
-            onAction={() => navigation.navigate('Accueil')}
+            onAction={() => navigation.navigate('Tabs', { screen: 'Accueil' })}
           />
         </View>
         <ScrollView

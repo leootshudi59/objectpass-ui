@@ -10,11 +10,12 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, type NavigationProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../navigation/types';
 import { Colors, healthColor } from '../constants/colors';
-import { mockDevices, Device } from '../data/mockDevices';
+import { mockDevices } from '../data/mockDevices';
 import { PrimaryButton, OutlineButton, StatusBadge } from '../components/ui';
-import type { Status } from '../components/ui';
+import type { Device, DiagnosisResult } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOTAL_STEPS = 3; // steps 0, 1, 2 → then result
@@ -38,14 +39,7 @@ const SEVERITIES = [
 
 // ── Result logic ───────────────────────────────────────────────────────────────
 
-interface DiagResult {
-  label: string;
-  priceRange: string;
-  duration: string;
-  urgency: Status;
-}
-
-function computeResult(symptomId: string, severityId: string): DiagResult {
+function computeResult(symptomId: string, severityId: string): DiagnosisResult {
   if (symptomId === 'batterie' && severityId === 'sévère')
     return { label: 'Remplacement batterie',             priceRange: '59 € – 89 €',  duration: '45 min', urgency: 'panne' };
   if (symptomId === 'ecran' && severityId === 'modéré')
@@ -88,7 +82,7 @@ function SelectableDeviceRow({
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
 export function DiagnosticScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [step, setStep] = useState(0);
   const [selectedDeviceId, setSelectedDeviceId]   = useState<string | null>(null);
   const [selectedSymptomId, setSelectedSymptomId] = useState<string | null>(null);

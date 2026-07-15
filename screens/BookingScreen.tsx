@@ -10,13 +10,13 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation, useRoute, type RouteProp, CommonActions } from '@react-navigation/native';
+import { useNavigation, useRoute, type NavigationProp, type RouteProp, CommonActions } from '@react-navigation/native';
 import { Colors } from '../constants/colors';
 import { StatusBadge } from '../components/ui';
 import { useAppointments } from '../context/AppointmentsContext';
-import type { MainStackParamList } from '../navigation/MainNavigator';
+import type { RootStackParamList } from '../navigation/types';
 
-type Route = RouteProp<MainStackParamList, 'Booking'>;
+type Route = RouteProp<RootStackParamList, 'Booking'>;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ function StarRow({ rating }: { rating: number }) {
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
 export function BookingScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<Route>();
   const { repairer, diagnosis } = route.params;
   const { addAppointment } = useAppointments();

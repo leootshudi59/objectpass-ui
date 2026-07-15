@@ -10,8 +10,9 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { Colors } from '../constants/colors';
+import type { RootStackParamList } from '../navigation/types';
 import { DeviceCard, SectionHeader } from '../components/ui';
 import { useDevices } from '../context/DevicesContext';
 
@@ -29,7 +30,7 @@ function StatCard({ value, label }: { value: string | number; label: string }) {
 // ── Home Screen ────────────────────────────────────────────────────────────────
 
 export function HomeScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { devices, newDeviceId, clearNewDevice } = useDevices();
 
   const [toastVisible, setToastVisible]   = useState(false);

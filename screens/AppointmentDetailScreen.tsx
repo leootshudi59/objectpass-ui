@@ -9,13 +9,14 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, type NavigationProp, type RouteProp } from '@react-navigation/native';
 import { Colors } from '../constants/colors';
 import { OutlineButton, PrimaryButton } from '../components/ui';
-import { useAppointments, type Appointment } from '../context/AppointmentsContext';
-import type { MainStackParamList } from '../navigation/MainNavigator';
+import { useAppointments } from '../context/AppointmentsContext';
+import type { Appointment } from '../types';
+import type { RootStackParamList } from '../navigation/types';
 
-type Route = RouteProp<MainStackParamList, 'AppointmentDetail'>;
+type Route = RouteProp<RootStackParamList, 'AppointmentDetail'>;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -128,7 +129,7 @@ function Timeline({ appointment }: { appointment: Appointment }) {
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
 export function AppointmentDetailScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<Route>();
   const { appointmentId } = route.params;
   const { appointments, updateAppointment } = useAppointments();

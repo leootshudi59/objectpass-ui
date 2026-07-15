@@ -7,7 +7,12 @@ import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import { Colors } from '../constants/colors';
 
-const Root = createNativeStackNavigator();
+type AppParamList = {
+  Auth: undefined;
+  Main: undefined;
+};
+
+const Root = createNativeStackNavigator<AppParamList>();
 
 function SplashView() {
   return (

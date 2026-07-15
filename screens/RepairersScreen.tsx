@@ -9,26 +9,12 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, type NavigationProp, type RouteProp } from '@react-navigation/native';
 import { Colors } from '../constants/colors';
-import type { MainStackParamList } from '../navigation/MainNavigator';
+import type { RootStackParamList } from '../navigation/types';
+import type { Repairer } from '../types';
 
-type Route = RouteProp<MainStackParamList, 'Repairers'>;
-
-// ── Mock data ──────────────────────────────────────────────────────────────────
-
-interface Repairer {
-  id: string;
-  name: string;
-  shop: string;
-  rating: number;
-  reviewCount: number;
-  certified: boolean;
-  tags: string[];
-  distance: string;
-  slot: string;
-  price: string;
-}
+type Route = RouteProp<RootStackParamList, 'Repairers'>;
 
 const REPAIRERS: Repairer[] = [
   {
@@ -184,7 +170,7 @@ function RepairerCard({ repairer, onReserve }: { repairer: Repairer; onReserve: 
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
 export function RepairersScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<Route>();
   const { deviceName, deviceModel, issueLabel, priceRange, urgency } = route.params;
 
@@ -194,15 +180,7 @@ export function RepairersScreen() {
 
   const handleReserve = (repairer: Repairer) => {
     navigation.navigate('Booking', {
-      repairer: {
-        name: repairer.name,
-        shop: repairer.shop,
-        rating: repairer.rating,
-        reviewCount: repairer.reviewCount,
-        certified: repairer.certified,
-        tags: repairer.tags,
-        price: repairer.price,
-      },
+      repairer,
       diagnosis: {
         deviceName,
         deviceModel,

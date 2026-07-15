@@ -16,10 +16,11 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, type NavigationProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../navigation/types';
 import { Colors } from '../constants/colors';
 import { useDevices } from '../context/DevicesContext';
-import type { DeviceEntry } from '../context/DevicesContext';
+import type { DeviceEntry } from '../types';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -255,7 +256,7 @@ function mapCategory(cat: string): DeviceEntry['category'] {
 // ── Main screen ────────────────────────────────────────────────────────────────
 
 export function AddDeviceScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { addDevice } = useDevices();
 
   // Step state

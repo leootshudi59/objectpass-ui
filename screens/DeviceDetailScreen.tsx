@@ -9,12 +9,13 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, type NavigationProp, type RouteProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../navigation/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 import { HealthScoreBadge, OutlineButton, PrimaryButton, SectionHeader } from '../components/ui';
 import { useDevices } from '../context/DevicesContext';
-import type { DeviceEntry } from '../context/DevicesContext';
+import type { DeviceEntry } from '../types';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -137,9 +138,9 @@ function warrantyStatusColor(w: WarrantyInfo) {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function DeviceDetailScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
-  const { deviceId } = route.params as { deviceId: string };
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'DeviceDetail'>>();
+  const { deviceId } = route.params;
   const { devices, removeDevice } = useDevices();
   const insets = useSafeAreaInsets();
 

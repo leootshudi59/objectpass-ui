@@ -8,10 +8,12 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, type NavigationProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../navigation/types';
 import { Colors } from '../constants/colors';
 import { StatusBadge, PrimaryButton } from '../components/ui';
-import { useAppointments, type Appointment } from '../context/AppointmentsContext';
+import { useAppointments } from '../context/AppointmentsContext';
+import type { Appointment } from '../types';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -156,7 +158,7 @@ function EmptyState({ tab, onDiagnostic }: { tab: TabKey; onDiagnostic: () => vo
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
 export function AppointmentsScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { appointments } = useAppointments();
   const [activeTab, setActiveTab] = useState<TabKey>('avenir');
 

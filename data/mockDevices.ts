@@ -1,30 +1,4 @@
-export type DeviceStatus = 'excellent' | 'bon' | 'attention' | 'panne';
-
-export interface Repair {
-  id: string;
-  date: string;
-  type: string;
-  repairer: string;
-  certified: boolean;
-  repairId?: string;
-}
-
-export interface Device {
-  id: string;
-  name: string;
-  model: string;
-  category: 'laptop' | 'phone' | 'ebike' | 'tablet' | 'other';
-  healthScore: number;
-  status: DeviceStatus;
-  lastRepairDate: string | null;
-  warrantyActive: boolean;
-  warrantyExpiry: string | null;
-  repairs: Repair[];
-  battery: number;
-  screen: number;
-  storage: number;
-  serialNumber?: string;
-}
+import type { Device } from '../types';
 
 export const mockDevices: Device[] = [
   {
