@@ -12,6 +12,8 @@ import { BookingScreen } from '../screens/BookingScreen';
 import { AppointmentsScreen } from '../screens/AppointmentsScreen';
 import { AppointmentDetailScreen } from '../screens/AppointmentDetailScreen';
 import { AddDeviceScreen } from '../screens/AddDeviceScreen';
+import { DeviceDetailScreen } from '../screens/DeviceDetailScreen';
+import { QRCodeModal } from '../screens/QRCodeModal';
 import { useAppointments } from '../context/AppointmentsContext';
 
 // ── Navigation types ───────────────────────────────────────────────────────────
@@ -47,6 +49,8 @@ export type MainStackParamList = {
     appointmentId: string;
   };
   AddDevice: undefined;
+  DeviceDetail: { deviceId: string };
+  QRCodeModal: { deviceId: string; name: string; serialNumber?: string };
 };
 
 // ── Tab navigator ──────────────────────────────────────────────────────────────
@@ -137,6 +141,16 @@ export function MainNavigator() {
       <Stack.Screen
         name="AddDevice"
         component={AddDeviceScreen}
+        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+      />
+      <Stack.Screen
+        name="DeviceDetail"
+        component={DeviceDetailScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="QRCodeModal"
+        component={QRCodeModal}
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
     </Stack.Navigator>

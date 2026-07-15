@@ -101,7 +101,10 @@ export function HomeScreen() {
             <SectionHeader title="Mes appareils" action="Tout voir" />
             {devices.map((device) => (
               <View key={device.id} style={styles.cardWrapper}>
-                <DeviceCard device={device as any} />
+                <DeviceCard
+                  device={device as any}
+                  onPress={() => navigation.navigate('DeviceDetail', { deviceId: device.id })}
+                />
                 {device.id === newDeviceId && (
                   <View style={styles.newBadge}>
                     <Text style={styles.newBadgeText}>Nouveau ✨</Text>
