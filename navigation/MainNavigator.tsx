@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -11,6 +11,7 @@ import { RepairersScreen } from '../screens/RepairersScreen';
 import { BookingScreen } from '../screens/BookingScreen';
 import { AppointmentsScreen } from '../screens/AppointmentsScreen';
 import { AppointmentDetailScreen } from '../screens/AppointmentDetailScreen';
+import { AddDeviceScreen } from '../screens/AddDeviceScreen';
 import { useAppointments } from '../context/AppointmentsContext';
 
 // ── Navigation types ───────────────────────────────────────────────────────────
@@ -45,24 +46,10 @@ export type MainStackParamList = {
   AppointmentDetail: {
     appointmentId: string;
   };
+  AddDevice: undefined;
 };
 
-// ── Placeholder (Ajouter tab) ──────────────────────────────────────────────────
-
-function AddPlaceholder() {
-  return (
-    <View style={ph.container}>
-      <Text style={ph.text}>Ajouter un appareil</Text>
-    </View>
-  );
-}
-
-const ph = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.cleanWhite },
-  text: { fontSize: 16, color: Colors.steelGrey, fontWeight: '600' },
-});
-
-// ── Tab navigator (inner) ──────────────────────────────────────────────────────
+// ── Tab navigator ──────────────────────────────────────────────────────────────
 
 const Tab = createBottomTabNavigator();
 
@@ -80,11 +67,11 @@ function TabNavigator() {
         tabBarLabelStyle: styles.tabLabel,
         tabBarIcon: ({ color, size }) => {
           const icons: Record<string, string> = {
-            Accueil:      'home',
-            Diagnostic:   'activity',
-            Ajouter:      'plus',
-            Rendez_vous:  'calendar',
-            Profil:       'user',
+            Accueil:     'home',
+            Diagnostic:  'activity',
+            Ajouter:     'plus',
+            Rendez_vous: 'calendar',
+            Profil:      'user',
           };
           const name = icons[route.name] ?? 'circle';
           if (route.name === 'Ajouter') {
@@ -98,12 +85,18 @@ function TabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Accueil"   component={HomeScreen} />
+      <Tab.Screen name="Accueil"    component={HomeScreen} />
       <Tab.Screen name="Diagnostic" component={DiagnosticScreen} />
       <Tab.Screen
         name="Ajouter"
-        component={AddPlaceholder}
+        component={HomeScreen}
         options={{ tabBarLabel: '' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('AddDevice');
+          },
+        })}
       />
       <Tab.Screen
         name="Rendez_vous"
@@ -118,7 +111,7 @@ function TabNavigator() {
   );
 }
 
-// ── Main stack (tabs + full-screen overlays) ───────────────────────────────────
+// ── Main stack ─────────────────────────────────────────────────────────────────
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -140,6 +133,11 @@ export function MainNavigator() {
         name="AppointmentDetail"
         component={AppointmentDetailScreen}
         options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="AddDevice"
+        component={AddDeviceScreen}
+        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
     </Stack.Navigator>
   );
