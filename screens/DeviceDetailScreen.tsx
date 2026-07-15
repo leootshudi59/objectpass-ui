@@ -573,7 +573,11 @@ export function DeviceDetailScreen() {
                 {repair.certified && (
                   <TouchableOpacity
                     style={styles.proofBtn}
-                    onPress={() => Alert.alert('', 'Preuve bientôt disponible')}
+                    onPress={() =>
+                      repair.repairId
+                        ? navigation.navigate('Certificate', { repairId: repair.repairId })
+                        : Alert.alert('', 'Preuve bientôt disponible')
+                    }
                   >
                     <Text style={styles.proofBtnText}>Voir la preuve</Text>
                   </TouchableOpacity>

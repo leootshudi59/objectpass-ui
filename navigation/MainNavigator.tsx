@@ -14,6 +14,7 @@ import { AppointmentDetailScreen } from '../screens/AppointmentDetailScreen';
 import { AddDeviceScreen } from '../screens/AddDeviceScreen';
 import { DeviceDetailScreen } from '../screens/DeviceDetailScreen';
 import { QRCodeModal } from '../screens/QRCodeModal';
+import { CertificateScreen } from '../screens/CertificateScreen';
 import { useAppointments } from '../context/AppointmentsContext';
 
 // ── Navigation types ───────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ export type MainStackParamList = {
   AddDevice: undefined;
   DeviceDetail: { deviceId: string };
   QRCodeModal: { deviceId: string; name: string; serialNumber?: string };
+  Certificate: { repairId: string };
 };
 
 // ── Tab navigator ──────────────────────────────────────────────────────────────
@@ -151,6 +153,11 @@ export function MainNavigator() {
       <Stack.Screen
         name="QRCodeModal"
         component={QRCodeModal}
+        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+      />
+      <Stack.Screen
+        name="Certificate"
+        component={CertificateScreen}
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
     </Stack.Navigator>

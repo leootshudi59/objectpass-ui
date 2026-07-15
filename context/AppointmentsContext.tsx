@@ -11,6 +11,7 @@ export interface Appointment {
   type: string;
   notes: string;
   createdAt: string;
+  repairId?: string;
 }
 
 const MOCK_APPOINTMENTS: Appointment[] = [
@@ -37,6 +38,7 @@ const MOCK_APPOINTMENTS: Appointment[] = [
     type: 'En boutique',
     notes: 'Écran fissuré coin bas gauche',
     createdAt: '2025-06-05T14:00:00.000Z',
+    repairId: 'rep_002',
   },
 ];
 

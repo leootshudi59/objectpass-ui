@@ -171,7 +171,11 @@ export function AppointmentDetailScreen() {
   };
 
   const handleProof = () => {
-    Alert.alert('Preuve de réparation', 'Fonctionnalité bientôt disponible 🛠️');
+    if (appointment.repairId) {
+      navigation.navigate('Certificate', { repairId: appointment.repairId });
+    } else {
+      Alert.alert('Preuve de réparation', 'Fonctionnalité bientôt disponible 🛠️');
+    }
   };
 
   const handleReview = () => {

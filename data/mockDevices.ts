@@ -6,6 +6,7 @@ export interface Repair {
   type: string;
   repairer: string;
   certified: boolean;
+  repairId?: string;
 }
 
 export interface Device {
@@ -22,6 +23,7 @@ export interface Device {
   battery: number;
   screen: number;
   storage: number;
+  serialNumber?: string;
 }
 
 export const mockDevices: Device[] = [
@@ -38,6 +40,7 @@ export const mockDevices: Device[] = [
     battery: 91,
     screen: 100,
     storage: 68,
+    serialNumber: 'C02XL0RUJHD2',
     repairs: [
       {
         id: 'r1',
@@ -45,6 +48,7 @@ export const mockDevices: Device[] = [
         type: 'Remplacement batterie',
         repairer: 'iRepair Paris 11e',
         certified: true,
+        repairId: 'rep_001',
       },
     ],
   },
@@ -61,6 +65,7 @@ export const mockDevices: Device[] = [
     battery: 98,
     screen: 100,
     storage: 82,
+    serialNumber: 'DNPH7V09PKDX',
     repairs: [
       {
         id: 'r2',
@@ -68,6 +73,7 @@ export const mockDevices: Device[] = [
         type: 'Remplacement écran',
         repairer: 'Apple Store Opéra',
         certified: true,
+        repairId: 'rep_002',
       },
     ],
   },
