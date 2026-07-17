@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
-  Animated,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -15,6 +14,7 @@ import { Colors } from '../constants/colors';
 import type { RootStackParamList } from '../navigation/types';
 import { DeviceCard, SectionHeader } from '../components/ui';
 import { useDevices } from '../context/DevicesContext';
+import { useToast } from '../context/ToastContext';
 
 // ── Stat strip card ────────────────────────────────────────────────────────────
 
@@ -32,10 +32,7 @@ function StatCard({ value, label }: { value: string | number; label: string }) {
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { devices, newDeviceId, clearNewDevice } = useDevices();
-
-  const [toastVisible, setToastVisible]   = useState(false);
-  const [toastName,    setToastName]      = useState('');
-  const toastAnim = useRef(new Animated.Value(0)).current;
+  const { showToast } = useToast();
 
   // Stats
   const total            = devices.length;
@@ -48,26 +45,9 @@ export function HomeScreen() {
     const device = devices.find((d) => d.id === newDeviceId);
     if (!device) return;
 
-    setToastName(device.name);
-    setToastVisible(true);
+    showToast(`✓ ${device.name} ajouté à votre ObjectPass`, 'success');
 
-    Animated.timing(toastAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-
-    const dismiss = setTimeout(() => {
-      Animated.timing(toastAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        setToastVisible(false);
-        clearNewDevice();
-      });
-    }, 3000);
-
+    const dismiss = setTimeout(clearNewDevice, 3000);
     return () => clearTimeout(dismiss);
   }, [newDeviceId]);
 
@@ -121,23 +101,6 @@ export function HomeScreen() {
           <Feather name="plus" size={26} color={Colors.cleanWhite} />
         </TouchableOpacity>
 
-        {/* ── Toast ─────────────────────────────────────────────────────── */}
-        {toastVisible && (
-          <Animated.View
-            style={[
-              styles.toast,
-              {
-                opacity: toastAnim,
-                transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-              },
-            ]}
-          >
-            <Feather name="check-circle" size={16} color={Colors.cleanWhite} />
-            <Text style={styles.toastText}>
-              ✓ {toastName} ajouté à votre ObjectPass
-            </Text>
-          </Animated.View>
-        )}
       </View>
     </SafeAreaView>
   );
@@ -224,23 +187,4 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
 
-  toast: {
-    position: 'absolute',
-    bottom: 100,
-    left: 20,
-    right: 20,
-    backgroundColor: Colors.objectNavy,
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  toastText: { fontSize: 14, fontWeight: '600', color: Colors.cleanWhite, flex: 1 },
 });

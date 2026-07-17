@@ -1,8 +1,11 @@
 import React from 'react';
+import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from './context/AuthContext';
 import { AppointmentsProvider } from './context/AppointmentsContext';
 import { DevicesProvider } from './context/DevicesContext';
+import { ToastProvider } from './context/ToastContext';
+import { ToastContainer } from './components/ui/ToastContainer';
 import { AppNavigator } from './navigation/AppNavigator';
 
 export default function App() {
@@ -10,8 +13,13 @@ export default function App() {
     <AuthProvider>
       <DevicesProvider>
         <AppointmentsProvider>
-          <StatusBar style="dark" />
-          <AppNavigator />
+          <ToastProvider>
+            <View style={{ flex: 1 }}>
+              <StatusBar style="dark" />
+              <AppNavigator />
+              <ToastContainer />
+            </View>
+          </ToastProvider>
         </AppointmentsProvider>
       </DevicesProvider>
     </AuthProvider>

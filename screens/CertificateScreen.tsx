@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useToast } from '../context/ToastContext';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../navigation/types';
@@ -143,12 +144,11 @@ export function CertificateScreen() {
   const secOp4 = useRef(new Animated.Value(0)).current;
   const secOp5 = useRef(new Animated.Value(0)).current;
   const sectionAnims = [secOp0, secOp1, secOp2, secOp3, secOp4, secOp5];
-  const toastOpacity = useRef(new Animated.Value(0)).current;
-
   // ── State
   const [copiedId, setCopiedId] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
+
+  const { showToast } = useToast();
 
   useEffect(() => {
     Animated.spring(checkScale, {
@@ -191,13 +191,8 @@ export function CertificateScreen() {
   };
 
   const handleAddToPassport = () => {
-    setToastVisible(true);
-    toastOpacity.setValue(0);
-    Animated.sequence([
-      Animated.timing(toastOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.delay(2400),
-      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
-    ]).start(() => navigation.goBack());
+    showToast(`✓ Preuve ajoutée au passeport de ${deviceName}`, 'success');
+    setTimeout(() => navigation.goBack(), 3000);
   };
 
   return (
@@ -585,20 +580,6 @@ export function CertificateScreen() {
         />
       </View>
 
-      {/* ── Toast ─────────────────────────────────────────────────── */}
-      {toastVisible && (
-        <Animated.View
-          style={[
-            styles.toast,
-            { opacity: toastOpacity, bottom: (insets.bottom || 0) + 84 },
-          ]}
-          pointerEvents="none"
-        >
-          <Text style={styles.toastText}>
-            ✓ Preuve ajoutée au passeport de {deviceName}
-          </Text>
-        </Animated.View>
-      )}
     </View>
   );
 }
@@ -1074,21 +1055,4 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
 
-  // ── Toast
-  toast: {
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    backgroundColor: Colors.objectNavy,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  toastText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.cleanWhite,
-    textAlign: 'center',
-  },
 });
