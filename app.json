@@ -18,6 +18,9 @@
         "backgroundColor": "#0E2530"
       },
       "package": "com.objectpass.app"
-    }
+    },
+    "plugins": [
+      "expo-sqlite"
+    ]
   }
 }

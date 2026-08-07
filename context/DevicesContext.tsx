@@ -1,11 +1,21 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { mockDevices } from '../data/mockDevices';
 import type { DeviceEntry } from '../types';
+import { useToast } from './ToastContext';
+import { useAppState } from './AppStateContext';
+import {
+  initDevicesTable,
+  getAllDevices,
+  insertDevice,
+  updateDeviceById,
+  deleteDevice,
+} from '../db/devicesDb';
 
 export type { DeviceEntry };
 
 interface DevicesContextValue {
   devices: DeviceEntry[];
+  loading: boolean;
   newDeviceId: string | null;
   addDevice: (device: DeviceEntry) => void;
   updateDevice: (id: string, changes: Partial<DeviceEntry>) => void;
@@ -15,30 +25,91 @@ interface DevicesContextValue {
 
 const DevicesContext = createContext<DevicesContextValue | null>(null);
 
-const SEED: DeviceEntry[] = mockDevices.map((d) => ({ ...d }));
+const MOCK_SEED: DeviceEntry[] = mockDevices.map((d) => ({ ...d }));
 
 export function DevicesProvider({ children }: { children: React.ReactNode }) {
-  const [devices, setDevices] = useState<DeviceEntry[]>(SEED);
+  const [devices, setDevices] = useState<DeviceEntry[]>([]);
   const [newDeviceId, setNewDeviceId] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const { showToast } = useToast();
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
+  const { setLoading: appSetLoading, setError: appSetError } = useAppState();
+  const appSetLoadingRef = useRef(appSetLoading);
+  appSetLoadingRef.current = appSetLoading;
+  const appSetErrorRef = useRef(appSetError);
+  appSetErrorRef.current = appSetError;
 
-  const addDevice = (device: DeviceEntry) => {
-    setDevices((prev) => [device, ...prev]);
-    setNewDeviceId(device.id);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrate() {
+      appSetLoadingRef.current(true);
+      try {
+        await initDevicesTable();
+        const rows = await getAllDevices();
+        if (cancelled) return;
+
+        if (rows.length === 0) {
+          for (const device of MOCK_SEED) {
+            await insertDevice(device);
+          }
+          if (!cancelled) setDevices(MOCK_SEED);
+        } else {
+          if (!cancelled) setDevices(rows);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          console.error('Error loading devices from database:', e);
+          appSetErrorRef.current('Impossible de charger vos appareils.');
+          setDevices(MOCK_SEED);
+        }
+      } finally {
+        appSetLoadingRef.current(false);
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    hydrate();
+    return () => { cancelled = true; };
+  }, []);
+
+  const addDevice = (device: DeviceEntry): void => {
+    insertDevice(device)
+      .then(() => {
+        setDevices((prev) => [device, ...prev]);
+        setNewDeviceId(device.id);
+      })
+      .catch(() => {
+        showToastRef.current("Impossible d'enregistrer l'appareil", 'error');
+      });
   };
 
-  const updateDevice = (id: string, changes: Partial<DeviceEntry>) => {
-    setDevices((prev) => prev.map((d) => (d.id === id ? { ...d, ...changes } : d)));
+  const updateDevice = (id: string, changes: Partial<DeviceEntry>): void => {
+    updateDeviceById(id, changes)
+      .then(() => {
+        setDevices((prev) => prev.map((d) => (d.id === id ? { ...d, ...changes } : d)));
+      })
+      .catch(() => {
+        showToastRef.current("Impossible de mettre à jour l'appareil", 'error');
+      });
   };
 
-  const removeDevice = (id: string) => {
-    setDevices((prev) => prev.filter((d) => d.id !== id));
+  const removeDevice = (id: string): void => {
+    deleteDevice(id)
+      .then(() => {
+        setDevices((prev) => prev.filter((d) => d.id !== id));
+      })
+      .catch(() => {
+        showToastRef.current("Impossible de supprimer l'appareil", 'error');
+      });
   };
 
   const clearNewDevice = () => setNewDeviceId(null);
 
   return (
     <DevicesContext.Provider
-      value={{ devices, newDeviceId, addDevice, updateDevice, removeDevice, clearNewDevice }}
+      value={{ devices, loading, newDeviceId, addDevice, updateDevice, removeDevice, clearNewDevice }}
     >
       {children}
     </DevicesContext.Provider>
