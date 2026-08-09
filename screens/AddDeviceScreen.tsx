@@ -3,9 +3,7 @@ import {
   Alert,
   Animated,
   Dimensions,
-  FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   SafeAreaView,
@@ -19,6 +17,19 @@ import { Feather } from '@expo/vector-icons';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../navigation/types';
 import { Colors } from '../constants/colors';
+import {
+  BRANDS,
+  CATEGORIES,
+  COLORS_LIST,
+  MODELS_BY_BRAND,
+  WARRANTY_OPTIONS,
+  computeWarranty,
+  formatDate,
+  getWarrantyMonths,
+  mapCategory,
+} from '../constants/deviceForm';
+import { PickerModal } from '../components/form/PickerModal';
+import { DatePickerModal } from '../components/form/DatePickerModal';
 import { useDevices } from '../context/DevicesContext';
 import type { DeviceEntry } from '../types';
 
@@ -27,183 +38,6 @@ import type { DeviceEntry } from '../types';
 const TOTAL_STEPS = 5;
 const { width: SCREEN_W } = Dimensions.get('window');
 const PROGRESS_W = SCREEN_W - 40;
-
-const CATEGORIES = [
-  { id: 'laptop',  label: 'Ordinateur',       emoji: '💻' },
-  { id: 'phone',   label: 'Smartphone',        emoji: '📱' },
-  { id: 'tablet',  label: 'Tablette',          emoji: '🖥️' },
-  { id: 'console', label: 'Console',           emoji: '🎮' },
-  { id: 'ebike',   label: 'Vélo électrique',   emoji: '🚲' },
-  { id: 'other',   label: 'Autre',             emoji: '🖨️' },
-];
-
-const BRANDS = ['Apple', 'Samsung', 'Lenovo', 'Dell', 'HP', 'Cowboy', 'VanMoof', 'Sony', 'Microsoft', 'Autre'];
-
-const MODELS_BY_BRAND: Record<string, string[]> = {
-  Apple:     ['MacBook Pro M1', 'MacBook Air M2', 'iPhone 15 Pro', 'iPhone 14', 'iPad Pro', 'Apple Watch'],
-  Samsung:   ['Galaxy S24', 'Galaxy Tab S9', 'Galaxy Book'],
-  Lenovo:    ['ThinkPad X1 Carbon', 'IdeaPad 5', 'Legion 5'],
-  Dell:      ['XPS 15', 'Inspiron 15', 'Latitude 14'],
-  HP:        ['Spectre x360', 'Pavilion 15', 'EliteBook 840'],
-  Cowboy:    ['C5', 'C4', 'C3'],
-  VanMoof:   ['S5', 'A5', 'S3'],
-  Sony:      ['PS5', 'WH-1000XM5', 'Xperia 1 V'],
-  Microsoft: ['Surface Pro 9', 'Surface Laptop 5', 'Xbox Series X'],
-  Autre:     ['Autre modèle'],
-};
-
-const MONTHS_FR = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
-const FULL_MONTHS_FR = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-const YEARS = Array.from({ length: 11 }, (_, i) => 2015 + i);
-
-const COLORS_LIST = [
-  { name: 'Space Grey',  hex: '#6B7C80' },
-  { name: 'Silver',      hex: '#C0C0C0' },
-  { name: 'Midnight',    hex: '#1C2526' },
-  { name: 'Starlight',   hex: '#F2E6D4' },
-  { name: 'Gold',        hex: '#D4AF37' },
-  { name: 'Blue',        hex: '#2D5BE3' },
-  { name: 'Green',       hex: '#2EB872' },
-  { name: 'Rouge',       hex: '#E85D5D' },
-];
-
-const WARRANTY_OPTIONS = [
-  { id: '1',     label: '1 an' },
-  { id: '2',     label: '2 ans' },
-  { id: 'other', label: 'Autre' },
-];
-
-// ── Generic picker modal ───────────────────────────────────────────────────────
-
-function PickerModal({
-  visible, title, options, selected, onSelect, onClose,
-}: {
-  visible: boolean;
-  title: string;
-  options: string[];
-  selected: string;
-  onSelect: (v: string) => void;
-  onClose: () => void;
-}) {
-  return (
-    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent>
-      <Pressable style={pm.overlay} onPress={onClose} />
-      <View style={pm.sheet}>
-        <View style={pm.handle} />
-        <Text style={pm.sheetTitle}>{title}</Text>
-        <FlatList
-          data={options}
-          keyExtractor={(item) => item}
-          style={{ maxHeight: 320 }}
-          renderItem={({ item }) => {
-            const active = selected === item;
-            return (
-              <Pressable
-                onPress={() => { onSelect(item); onClose(); }}
-                style={[pm.option, active && pm.optionActive]}
-              >
-                {active && <Feather name="check" size={16} color={Colors.repairTeal} style={{ marginRight: 8 }} />}
-                <Text style={[pm.optionText, active && pm.optionTextActive]}>{item}</Text>
-              </Pressable>
-            );
-          }}
-        />
-      </View>
-    </Modal>
-  );
-}
-
-const pm = StyleSheet.create({
-  overlay:        { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet:          { backgroundColor: Colors.cleanWhite, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
-  handle:         { width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.borderMist, alignSelf: 'center', marginBottom: 16 },
-  sheetTitle:     { fontSize: 17, fontWeight: '700', color: Colors.graphite, marginBottom: 12 },
-  option:         { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.borderMist },
-  optionActive:   { },
-  optionText:     { fontSize: 15, color: Colors.graphite },
-  optionTextActive: { color: Colors.repairTeal, fontWeight: '700' },
-});
-
-// ── Date picker modal ──────────────────────────────────────────────────────────
-
-function DatePickerModal({
-  visible, value, onChange, onClose,
-}: {
-  visible: boolean;
-  value: Date | null;
-  onChange: (d: Date) => void;
-  onClose: () => void;
-}) {
-  const today = new Date();
-  const [selDay,   setSelDay]   = useState(value?.getDate()     ?? today.getDate());
-  const [selMonth, setSelMonth] = useState(value?.getMonth()    ?? today.getMonth());
-  const [selYear,  setSelYear]  = useState(value?.getFullYear() ?? today.getFullYear());
-
-  const maxDay = new Date(selYear, selMonth + 1, 0).getDate();
-  const days = Array.from({ length: maxDay }, (_, i) => i + 1);
-
-  const confirm = () => {
-    const d = Math.min(selDay, maxDay);
-    onChange(new Date(selYear, selMonth, d));
-    onClose();
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent>
-      <Pressable style={pm.overlay} onPress={onClose} />
-      <View style={dp.sheet}>
-        <View style={pm.handle} />
-        <Text style={pm.sheetTitle}>Date d'achat</Text>
-
-        <View style={dp.columns}>
-          {/* Day */}
-          <ScrollView style={dp.col} showsVerticalScrollIndicator={false}>
-            {days.map((d) => (
-              <Pressable key={d} onPress={() => setSelDay(d)}
-                style={[dp.colItem, selDay === d && dp.colItemActive]}>
-                <Text style={[dp.colText, selDay === d && dp.colTextActive]}>{d}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-          {/* Month */}
-          <ScrollView style={[dp.col, { flex: 2 }]} showsVerticalScrollIndicator={false}>
-            {FULL_MONTHS_FR.map((m, i) => (
-              <Pressable key={m} onPress={() => setSelMonth(i)}
-                style={[dp.colItem, selMonth === i && dp.colItemActive]}>
-                <Text style={[dp.colText, selMonth === i && dp.colTextActive]}>{m}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-          {/* Year */}
-          <ScrollView style={dp.col} showsVerticalScrollIndicator={false}>
-            {YEARS.map((y) => (
-              <Pressable key={y} onPress={() => setSelYear(y)}
-                style={[dp.colItem, selYear === y && dp.colItemActive]}>
-                <Text style={[dp.colText, selYear === y && dp.colTextActive]}>{y}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-
-        <Pressable onPress={confirm} style={dp.confirmBtn}>
-          <Text style={dp.confirmLabel}>Valider</Text>
-        </Pressable>
-      </View>
-    </Modal>
-  );
-}
-
-const dp = StyleSheet.create({
-  sheet:         { backgroundColor: Colors.cleanWhite, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
-  columns:       { flexDirection: 'row', height: 220, gap: 4, marginBottom: 16 },
-  col:           { flex: 1 },
-  colItem:       { paddingVertical: 10, paddingHorizontal: 6, borderRadius: 8, marginBottom: 2, alignItems: 'center' },
-  colItemActive: { backgroundColor: Colors.objectNavy },
-  colText:       { fontSize: 15, color: Colors.graphite, textAlign: 'center' },
-  colTextActive: { color: Colors.cleanWhite, fontWeight: '700' },
-  confirmBtn:    { backgroundColor: Colors.repairTeal, borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center' },
-  confirmLabel:  { fontSize: 16, fontWeight: '700', color: Colors.cleanWhite },
-});
 
 // ── Scanner overlay ────────────────────────────────────────────────────────────
 
@@ -221,37 +55,6 @@ const sc = StyleSheet.create({
   frame:   { width: 220, height: 220, borderWidth: 2.5, borderColor: Colors.cleanWhite, borderRadius: 12 },
   text:    { marginTop: 24, fontSize: 16, color: Colors.cleanWhite, fontWeight: '600' },
 });
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-function formatDate(d: Date): string {
-  return `${String(d.getDate()).padStart(2, '0')} ${FULL_MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`;
-}
-
-function getWarrantyMonths(option: string, custom: string): number {
-  if (option === '1') return 12;
-  if (option === '2') return 24;
-  if (option === 'other') return parseInt(custom) || 0;
-  return 0;
-}
-
-function computeWarranty(purchaseDate: Date, months: number): { active: boolean; expiry: string | null } {
-  if (months === 0) return { active: false, expiry: null };
-  const exp = new Date(purchaseDate);
-  exp.setMonth(exp.getMonth() + months);
-  return {
-    active: exp > new Date(),
-    expiry: `${MONTHS_FR[exp.getMonth()]} ${exp.getFullYear()}`,
-  };
-}
-
-function mapCategory(cat: string): DeviceEntry['category'] {
-  if (cat === 'laptop')  return 'laptop';
-  if (cat === 'phone')   return 'phone';
-  if (cat === 'tablet')  return 'tablet';
-  if (cat === 'ebike')   return 'ebike';
-  return 'other';
-}
 
 // ── Main screen ────────────────────────────────────────────────────────────────
 

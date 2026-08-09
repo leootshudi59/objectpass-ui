@@ -1,6 +1,6 @@
 # ObjectPass — Plan de développement & suivi de progression
 
-> Dernière mise à jour : 2026-07-17 (étape 20 — AppStateContext + GlobalLoadingOverlay + GlobalErrorBanner)
+> Dernière mise à jour : 2026-08-09 (étape 21 — EditDeviceScreen)
 
 ---
 
@@ -295,6 +295,19 @@ ObjectPass est le carnet de santé numérique des appareils électroniques — u
 - `/context/AppointmentsContext.tsx` — réécriture complète sur le modèle de `DevicesContext` : `useState([])` au lieu du seed statique, `loading: boolean` ajouté au state et à l'interface du contexte, `showToastRef` (useRef) pour accéder à `showToast` sans dépendance instable, `useEffect` au montage : `initAppointmentsTable()` → `getAllAppointments()` → si vide, seed des 2 mocks via `insertAppointment()` → `setAppointments`, fallback sur les mocks en cas d'erreur DB ; `addAppointment` / `updateAppointment` / `cancelAppointment` : DB en premier, state local mis à jour uniquement si la DB réussit, toast d'erreur si échec. API du contexte inchangée (mêmes noms de fonctions et signatures).
 **Résultat :** Les rendez-vous survivent à un redémarrage de l'app sur natif (SQLite) et sur web (AsyncStorage). Au premier lancement, les 2 rendez-vous mock sont insérés en base via `insertAppointment()`. Les ajouts, mises à jour et annulations sont écrits en DB avant d'être reflétés en mémoire. Toute erreur DB déclenche un toast d'erreur sans corrompre l'état local. Le `getDb()` singleton est désormais partagé entre `devicesDb.native.ts` et `appointmentsDb.native.ts`. `tsc --noEmit` : zéro erreur.
 
+### Étape 21 — EditDeviceScreen (formulaire d'édition d'appareil)
+**Prompt résumé :** Remplacer les mock Alerts "Modification bientôt disponible" dans DeviceDetailScreen par un vrai écran d'édition en formulaire unique (modal slide-up). Extraire les sous-composants de formulaire partagés. Recalculer le score santé à la sauvegarde.
+**Fichiers créés / modifiés :**
+- `/constants/deviceForm.ts` — (nouveau) constantes et helpers partagés entre AddDeviceScreen et EditDeviceScreen : `CATEGORIES`, `BRANDS`, `MODELS_BY_BRAND`, `MONTHS_FR`, `FULL_MONTHS_FR`, `YEARS`, `COLORS_LIST`, `WARRANTY_OPTIONS` + fonctions `formatDate`, `parseDateString`, `getWarrantyMonths`, `monthsToWarrantyOpt`, `computeWarranty`, `mapCategory`, `computeHealthScore`
+- `/components/form/PickerModal.tsx` — (nouveau) composant générique de sélection (sheet bottom, FlatList, check actif) extrait de AddDeviceScreen
+- `/components/form/DatePickerModal.tsx` — (nouveau) sélecteur de date 3 colonnes (jour / mois / année) extrait de AddDeviceScreen, prop `title` optionnelle
+- `/screens/AddDeviceScreen.tsx` — suppression des constantes et helpers locaux dupliqués, suppression de `PickerModal` et `DatePickerModal` locaux, imports depuis `../constants/deviceForm` et `../components/form/`
+- `/screens/EditDeviceScreen.tsx` — (nouveau) écran modal complet : header Annuler / Modifier l'appareil / Enregistrer, ScrollView avec 4 sections (`SectionHeader` + card Paper Sage) : IDENTITÉ (nom avec inline error Fault Coral si vide + compteur 40 car., catégorie chips, numéro de série), ACHAT (date d'achat, prix, lieu, garantie constructeur pills + custom), APPARENCE (zone photo mock, cercles couleur), DOCUMENTS (zone facture mock) ; pré-remplissage complet depuis `DevicesContext` ; dirty-state tracking par comparaison champ par champ ; "Enregistrer" activé uniquement si au moins un champ a changé ET nom non vide ; à la sauvegarde : diff partiel, `computeWarranty`, `computeHealthScore`, `updateDevice`, toast `✓ Appareil mis à jour`, `navigation.goBack()` ; à l'annulation sale : Alert "Abandonner les modifications ?" avec option destructive ; erreur DB gérée par `updateDevice` (toast existant)
+- `/navigation/types.ts` — ajout de `EditDevice: { deviceId: string }` dans `RootStackParamList`
+- `/navigation/MainNavigator.tsx` — import de `EditDeviceScreen`, route `EditDevice` ajoutée (`presentation: 'modal', animation: 'slide_from_bottom'`)
+- `/screens/DeviceDetailScreen.tsx` — remplacement des deux mock Alerts "Modification bientôt disponible" (sticky bar "Modifier" + menu trois-points "Modifier l'appareil") par `navigation.navigate('EditDevice', { deviceId: device.id })`
+**Résultat :** Tap "Modifier" depuis DeviceDetailScreen (bouton bas ou menu ···) → modal EditDeviceScreen pré-rempli. "Enregistrer" désactivé jusqu'à modification réelle. Le nom vide bloque la sauvegarde et affiche une erreur inline Fault Coral. Sauvegarde persistée en SQLite (natif) / AsyncStorage (web) via `updateDevice`. Le score santé est recalculé et mis à jour. `tsc --noEmit` : zéro erreur.
+
 ### Étape 20 — AppStateContext + GlobalLoadingOverlay + GlobalErrorBanner
 **Prompt résumé :** Créer le système de chargement et d'erreur global de l'application : `AppStateContext` (état partagé), `GlobalLoadingOverlay` (spinner bloquant) et `GlobalErrorBanner` (bandeau animé auto-dismiss 5s). Câbler les deux contextes de persistance sur `setLoading` / `setError`. Monter les deux composants à la racine de l'app.
 **Fichiers créés / modifiés :**
@@ -418,6 +431,7 @@ ObjectPass est le carnet de santé numérique des appareils électroniques — u
 - [x] QR code de partage du passeport (QRCodeModal, modal slide-up)
 - [x] Section "Valeur estimée" avec prix mock et tendance marché
 - [x] Section "Documents" (Facture / Preuve de réparation / Certificat ObjectPass)
+- [x] `EditDeviceScreen` — formulaire unique pré-rempli, dirty-state, score santé recalculé, persistance SQLite/AsyncStorage
 
 ### Preuve de réparation
 - [x] `CertificateScreen` (après réparation certifiée par un réparateur)
@@ -450,11 +464,11 @@ ObjectPass est le carnet de santé numérique des appareils électroniques — u
 
 ## 📊 Pourcentage de progression
 
-**Progression globale : 83 %**
+**Progression globale : 84 %**
 
 ```
-████████████████░░░░  83 %
-(83 items complétés / 100 items totaux)
+████████████████░░░░  84 %
+(85 items complétés / 101 items totaux)
 ```
 
 | Phase | Statut | % |
@@ -488,6 +502,9 @@ ObjectPass/
 ├── app.json
 ├── babel.config.js
 ├── components/
+│   ├── form/
+│   │   ├── DatePickerModal.tsx              ← sélecteur 3 colonnes jour/mois/année, prop title optionnelle
+│   │   └── PickerModal.tsx                  ← sheet générique de sélection (FlatList + check actif)
 │   └── ui/
 │       ├── DeviceCard.tsx
 │       ├── HealthScoreBadge.tsx
@@ -502,7 +519,8 @@ ObjectPass/
 │       ├── ToastContainer.tsx               ← ToastContainer + ToastItem (animé, 4 types)
 │       └── index.ts
 ├── constants/
-│   └── colors.ts
+│   ├── colors.ts
+│   └── deviceForm.ts                        ← constantes + helpers partagés AddDevice/EditDevice
 ├── context/
 │   ├── AppStateContext.tsx                  ← isLoading (compteur), loadingMessage, error — setLoading/setError/clearError
 │   ├── AppointmentsContext.tsx              ← DB-first, seed au 1er lancement, loading flag, setLoading/setError global
@@ -536,6 +554,7 @@ ObjectPass/
 │   ├── CertificateScreen.tsx
 │   ├── DeviceDetailScreen.tsx
 │   ├── DiagnosticScreen.tsx
+│   ├── EditDeviceScreen.tsx                 ← formulaire unique pré-rempli, dirty-state, score santé recalculé
 │   ├── HomeScreen.tsx
 │   ├── LoginScreen.tsx
 │   ├── ProfileScreen.tsx
@@ -549,15 +568,15 @@ ObjectPass/
 
 ## 🔮 Prochaines étapes suggérées
 
-> **Sprint de solidification terminé.** Prochaines priorités :
-
 1. **Supprimer RootNavigator.tsx** — Fichier obsolète remplacé par `MainNavigator.tsx`. Vérifier qu'aucun import ne pointe encore vers lui, puis supprimer le fichier.
 
-2. **Skeleton loaders sur HomeScreen et AppointmentsScreen** — Les flags `loading` de `DevicesContext` et `AppointmentsContext` sont exposés. L'overlay global gère l'hydratation, mais des skeletons spécifiques aux listes amélioreront le ressenti (transitions avant que les données n'arrivent en React state local).
+2. **Skeleton loaders sur HomeScreen et AppointmentsScreen** — Les flags `loading` de `DevicesContext` et `AppointmentsContext` sont exposés. L'overlay global gère l'hydratation, mais des skeletons spécifiques aux listes amélioreront le ressenti.
 
-3. **Vrai scan caméra + upload facture** — Brancher Expo Camera (scan code-barres) et Expo Image Picker (upload facture) dans `AddDeviceScreen`, en remplacement des mocks actuels.
+3. **Vrai scan caméra + upload facture** — Brancher Expo Camera (scan code-barres) et Expo Image Picker (upload facture) dans `AddDeviceScreen` et `EditDeviceScreen`, en remplacement des mocks actuels.
 
 4. **OAuth réel** — Brancher Expo AuthSession pour Google et Apple dans `WelcomeScreen` et `LoginScreen`, en remplacement des mocks 1 200ms.
+
+5. **Édition du profil** — Ajouter un formulaire d'édition du nom et de la photo dans `ProfileScreen` (Expo Image Picker), en s'appuyant sur le pattern établi par `EditDeviceScreen`.
 
 ---
 
