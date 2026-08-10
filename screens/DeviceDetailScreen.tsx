@@ -214,7 +214,7 @@ export function DeviceDetailScreen() {
     Alert.alert('Options', undefined, [
       {
         text: "Modifier l'appareil",
-        onPress: () => Alert.alert('', 'Modification bientôt disponible'),
+        onPress: () => navigation.navigate('EditDevice', { deviceId: device.id }),
       },
       {
         text: 'Générer un QR code',
@@ -734,7 +734,7 @@ export function DeviceDetailScreen() {
         <View style={{ flex: 1 }}>
           <OutlineButton
             label="Modifier"
-            onPress={() => Alert.alert('', 'Modification bientôt disponible')}
+            onPress={() => navigation.navigate('EditDevice', { deviceId: device.id })}
             fullWidth
           />
         </View>

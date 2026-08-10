@@ -17,6 +17,7 @@ import { AddDeviceScreen } from '../screens/AddDeviceScreen';
 import { DeviceDetailScreen } from '../screens/DeviceDetailScreen';
 import { QRCodeModal } from '../screens/QRCodeModal';
 import { CertificateScreen } from '../screens/CertificateScreen';
+import { EditDeviceScreen } from '../screens/EditDeviceScreen';
 import { useAppointments } from '../context/AppointmentsContext';
 
 export type { RootStackParamList, MainTabParamList };
@@ -127,6 +128,11 @@ export function MainNavigator() {
       <Stack.Screen
         name="Certificate"
         component={CertificateScreen}
+        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+      />
+      <Stack.Screen
+        name="EditDevice"
+        component={EditDeviceScreen}
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
     </Stack.Navigator>
