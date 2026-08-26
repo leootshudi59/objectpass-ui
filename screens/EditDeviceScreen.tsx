@@ -28,7 +28,8 @@ import {
   parseDateString,
 } from '../constants/deviceForm';
 import { DatePickerModal } from '../components/form/DatePickerModal';
-import { SectionHeader } from '../components/ui';
+import { OutlineButton, SectionHeader } from '../components/ui';
+import { OWNERSHIP_STATUS_CONFIG, getOwnership } from '../constants/ownership';
 import { useDevices } from '../context/DevicesContext';
 import { useToast } from '../context/ToastContext';
 
@@ -38,7 +39,7 @@ export function EditDeviceScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'EditDevice'>>();
   const { deviceId } = route.params;
-  const { devices, updateDevice } = useDevices();
+  const { devices, updateDevice, removeDevice } = useDevices();
   const { showToast } = useToast();
 
   const device = devices.find((d) => d.id === deviceId);
@@ -97,6 +98,9 @@ export function EditDeviceScreen() {
   const canSave = isDirty && !nameEmpty;
 
   if (!device) return null;
+
+  const ownership = getOwnership(device);
+  const ownershipCfg = OWNERSHIP_STATUS_CONFIG[ownership.status];
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -179,6 +183,47 @@ export function EditDeviceScreen() {
       { text: 'Choisir dans la galerie', onPress: () => setPhotoEmoji(catEmoji) },
       { text: 'Annuler', style: 'cancel' },
     ]);
+  };
+
+  const handleTransfer = () => {
+    navigation.navigate('TransferOwnership', { deviceId: device.id });
+  };
+
+  const handleArchive = () => {
+    Alert.alert(
+      'Archiver cet appareil ?',
+      "L'appareil disparaîtra de votre liste principale mais restera accessible et conservera tout son historique certifié.",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Archiver',
+          onPress: () => {
+            updateDevice(device.id, { status: 'archived' });
+            showToast('✓ Appareil archivé', 'success');
+            navigation.goBack();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Supprimer l'appareil",
+      `L'ObjectPass de ${device.name} et son historique certifié seront définitivement perdus. Cette action est irréversible.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: () => {
+            removeDevice(device.id);
+            showToast('✓ Appareil supprimé', 'success');
+            navigation.navigate('Tabs', { screen: 'Accueil' });
+          },
+        },
+      ]
+    );
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -314,9 +359,15 @@ export function EditDeviceScreen() {
               placeholderTextColor={Colors.steelGrey}
               returnKeyType="done"
             />
+          </View>
 
-            {/* Warranty */}
-            <Text style={[styles.fieldLabel, { marginTop: 16 }]}>DURÉE DE GARANTIE CONSTRUCTEUR</Text>
+          {/* ── GARANTIE ──────────────────────────────────────────── */}
+          <View style={styles.sectionHead}>
+            <SectionHeader title="Garantie" />
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.fieldLabel}>DURÉE DE GARANTIE CONSTRUCTEUR</Text>
             <View style={styles.pillRow}>
               {WARRANTY_OPTIONS.map((opt) => {
                 const active = warrantyOpt === opt.id;
@@ -344,6 +395,27 @@ export function EditDeviceScreen() {
                 returnKeyType="done"
               />
             )}
+          </View>
+
+          {/* ── DOCUMENTS ─────────────────────────────────────────── */}
+          <View style={styles.sectionHead}>
+            <SectionHeader title="Documents" />
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.fieldLabel}>FACTURE (OPTIONNEL)</Text>
+            <Pressable
+              style={[styles.invoiceZone, hasInvoice && styles.invoiceZoneDone]}
+              onPress={handleInvoicePress}
+            >
+              <Text style={styles.invoiceIcon}>{hasInvoice ? '✅' : '📎'}</Text>
+              <Text style={[styles.invoiceLabel, hasInvoice && { color: Colors.graphite }]}>
+                {hasInvoice ? 'facture_achat.jpg · Ajoutée' : 'Ajouter une facture'}
+              </Text>
+              {!hasInvoice && (
+                <Text style={styles.invoiceSub}>Photo ou PDF · Max 10 Mo</Text>
+              )}
+            </Pressable>
           </View>
 
           {/* ── APPARENCE ─────────────────────────────────────────── */}
@@ -393,24 +465,48 @@ export function EditDeviceScreen() {
             )}
           </View>
 
-          {/* ── DOCUMENTS ─────────────────────────────────────────── */}
+          {/* ── PROPRIÉTÉ ─────────────────────────────────────────── */}
           <View style={styles.sectionHead}>
-            <SectionHeader title="Documents" />
+            <SectionHeader title="Propriété" />
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.fieldLabel}>FACTURE (OPTIONNEL)</Text>
-            <Pressable
-              style={[styles.invoiceZone, hasInvoice && styles.invoiceZoneDone]}
-              onPress={handleInvoicePress}
-            >
-              <Text style={styles.invoiceIcon}>{hasInvoice ? '✅' : '📎'}</Text>
-              <Text style={[styles.invoiceLabel, hasInvoice && { color: Colors.graphite }]}>
-                {hasInvoice ? 'facture_achat.jpg · Ajoutée' : 'Ajouter une facture'}
-              </Text>
-              {!hasInvoice && (
-                <Text style={styles.invoiceSub}>Photo ou PDF · Max 10 Mo</Text>
-              )}
+            <View style={styles.ownershipRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>PROPRIÉTAIRE ACTUEL</Text>
+                <Text style={styles.ownershipOwner}>{ownership.currentOwner}</Text>
+              </View>
+              <View style={[styles.ownershipBadge, { backgroundColor: ownershipCfg.bg }]}>
+                <View style={[styles.ownershipDot, { backgroundColor: ownershipCfg.color }]} />
+                <Text style={[styles.ownershipBadgeText, { color: ownershipCfg.color }]}>
+                  {ownershipCfg.label}
+                </Text>
+              </View>
+            </View>
+
+            {ownership.status !== 'transferred' && (
+              <View style={styles.ownershipActions}>
+                <OutlineButton
+                  label={ownership.status === 'pending_sent' ? "Voir l'invitation en cours" : 'Transférer la propriété'}
+                  onPress={handleTransfer}
+                  fullWidth
+                />
+                <OutlineButton label="Archiver cet appareil" onPress={handleArchive} fullWidth />
+              </View>
+            )}
+          </View>
+
+          {/* ── ZONE SENSIBLE ─────────────────────────────────────── */}
+          <View style={styles.sectionHead}>
+            <SectionHeader title="Zone sensible" />
+          </View>
+
+          <View style={[styles.card, styles.dangerCard]}>
+            <Text style={styles.dangerWarning}>
+              La suppression de cet appareil est irréversible : l'ObjectPass et son historique certifié seront définitivement perdus.
+            </Text>
+            <Pressable style={styles.dangerBtn} onPress={handleDelete}>
+              <Text style={styles.dangerBtnText}>Supprimer l'appareil</Text>
             </Pressable>
           </View>
 
@@ -548,4 +644,18 @@ const styles = StyleSheet.create({
   invoiceIcon:    { fontSize: 24 },
   invoiceLabel:   { fontSize: 14, fontWeight: '600', color: Colors.repairTeal },
   invoiceSub:     { fontSize: 12, color: Colors.steelGrey },
+
+  // Ownership card
+  ownershipRow:       { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  ownershipOwner:      { fontSize: 16, fontWeight: '700', color: Colors.graphite, marginTop: 4 },
+  ownershipBadge:      { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5, marginLeft: 12 },
+  ownershipDot:        { width: 6, height: 6, borderRadius: 3 },
+  ownershipBadgeText:  { fontSize: 11, fontWeight: '700' },
+  ownershipActions:    { marginTop: 16, gap: 10 },
+
+  // Danger zone
+  dangerCard:     { backgroundColor: '#FDF2F2', borderWidth: 1.5, borderColor: Colors.faultCoral },
+  dangerWarning:  { fontSize: 13, color: Colors.graphite, lineHeight: 19 },
+  dangerBtn:      { marginTop: 14, height: 52, borderRadius: 12, backgroundColor: Colors.faultCoral, alignItems: 'center', justifyContent: 'center' },
+  dangerBtnText:  { fontSize: 15, fontWeight: '700', color: Colors.cleanWhite },
 });

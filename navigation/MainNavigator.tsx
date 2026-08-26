@@ -18,6 +18,7 @@ import { DeviceDetailScreen } from '../screens/DeviceDetailScreen';
 import { QRCodeModal } from '../screens/QRCodeModal';
 import { CertificateScreen } from '../screens/CertificateScreen';
 import { EditDeviceScreen } from '../screens/EditDeviceScreen';
+import { TransferOwnershipScreen } from '../screens/TransferOwnershipScreen';
 import { useAppointments } from '../context/AppointmentsContext';
 
 export type { RootStackParamList, MainTabParamList };
@@ -134,6 +135,11 @@ export function MainNavigator() {
         name="EditDevice"
         component={EditDeviceScreen}
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+      />
+      <Stack.Screen
+        name="TransferOwnership"
+        component={TransferOwnershipScreen}
+        options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>
   );

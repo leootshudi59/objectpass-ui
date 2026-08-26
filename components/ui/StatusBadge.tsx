@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../constants/colors';
 
-export type Status = 'excellent' | 'bon' | 'attention' | 'panne' | 'certifié';
+export type Status = 'excellent' | 'bon' | 'attention' | 'panne' | 'certifié' | 'archived';
 
 const STATUS_CONFIG: Record<Status, { label: string; bg: string; text: string; dot: string }> = {
   excellent: { label: 'Excellent',  bg: '#E8F9F0', text: Colors.warrantyGreen,   dot: Colors.warrantyGreen },
@@ -10,6 +10,7 @@ const STATUS_CONFIG: Record<Status, { label: string; bg: string; text: string; d
   attention: { label: 'À vérifier', bg: '#FEF6E4', text: Colors.diagnosticAmber, dot: Colors.diagnosticAmber },
   panne:     { label: 'En panne',   bg: '#FDE8E8', text: Colors.faultCoral,      dot: Colors.faultCoral },
   certifié:  { label: 'Certifié',   bg: '#E5EBFF', text: Colors.proofBlue,       dot: Colors.proofBlue },
+  archived:  { label: 'Archivé',    bg: '#EDEFF0', text: Colors.steelGrey,      dot: Colors.steelGrey },
 };
 
 interface Props {

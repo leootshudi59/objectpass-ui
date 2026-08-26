@@ -1,6 +1,6 @@
-import type { Device } from '../types';
+import type { DeviceEntry } from '../types';
 
-export const mockDevices: Device[] = [
+export const mockDevices: DeviceEntry[] = [
   {
     id: '1',
     name: 'MacBook Pro M1',
@@ -25,6 +25,7 @@ export const mockDevices: Device[] = [
         repairId: 'rep_001',
       },
     ],
+    ownership: { currentOwner: 'Vous', status: 'none', history: [] },
   },
   {
     id: '2',
@@ -50,6 +51,7 @@ export const mockDevices: Device[] = [
         repairId: 'rep_002',
       },
     ],
+    ownership: { currentOwner: 'Vous', status: 'none', history: [] },
   },
   {
     id: '3',
@@ -65,5 +67,6 @@ export const mockDevices: Device[] = [
     screen: 88,
     storage: 100,
     repairs: [],
+    ownership: { currentOwner: 'Vous', status: 'none', history: [] },
   },
 ];

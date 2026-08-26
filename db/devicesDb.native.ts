@@ -1,5 +1,5 @@
 import { SQLiteBindValue } from 'expo-sqlite';
-import type { DeviceCategory, DeviceStatus, Repair, DeviceEntry } from '../types';
+import type { DeviceCategory, DeviceStatus, DeviceOwnership, Repair, DeviceEntry } from '../types';
 import { getDb } from './database.native';
 
 interface DeviceRow {
@@ -24,6 +24,7 @@ interface DeviceRow {
   hasInvoice: number | null;
   color: string | null;
   createdAt: string | null;
+  ownership: string | null;
 }
 
 function rowToDeviceEntry(row: DeviceRow): DeviceEntry {
@@ -50,6 +51,7 @@ function rowToDeviceEntry(row: DeviceRow): DeviceEntry {
   if (row.hasInvoice !== null) entry.hasInvoice = row.hasInvoice === 1;
   if (row.color !== null) entry.color = row.color;
   if (row.createdAt !== null) entry.createdAt = row.createdAt;
+  if (row.ownership !== null) entry.ownership = JSON.parse(row.ownership) as DeviceOwnership;
   return entry;
 }
 
@@ -78,9 +80,19 @@ export async function initDevicesTable(): Promise<void> {
         warrantyMonths INTEGER,
         hasInvoice INTEGER,
         color TEXT,
-        createdAt TEXT
+        createdAt TEXT,
+        ownership TEXT
       );
     `);
+    // Defensive migration: CREATE TABLE IF NOT EXISTS above does not add new
+    // columns to a devices table that already existed before this column was
+    // introduced. ALTER TABLE fails with "duplicate column" once it's there,
+    // which is expected and safe to ignore.
+    try {
+      await db.execAsync('ALTER TABLE devices ADD COLUMN ownership TEXT');
+    } catch {
+      // Column already exists — no-op.
+    }
   } catch (e) {
     throw new Error(`initDevicesTable failed: ${String(e)}`);
   }
@@ -107,8 +119,8 @@ export async function insertDevice(device: DeviceEntry): Promise<void> {
         id, name, model, category, healthScore, status, lastRepairDate,
         warrantyActive, warrantyExpiry, repairs, battery, screen, storage,
         serialNumber, purchaseDate, purchasePrice, purchasePlace,
-        warrantyMonths, hasInvoice, color, createdAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        warrantyMonths, hasInvoice, color, createdAt, ownership
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         device.id,
         device.name,
@@ -131,6 +143,7 @@ export async function insertDevice(device: DeviceEntry): Promise<void> {
         device.hasInvoice != null ? (device.hasInvoice ? 1 : 0) : null,
         device.color ?? null,
         device.createdAt ?? null,
+        device.ownership ? JSON.stringify(device.ownership) : null,
       ]
     );
   } catch (e) {

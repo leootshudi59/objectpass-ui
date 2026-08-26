@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 import { HealthScoreBadge, OutlineButton, PrimaryButton, SectionHeader } from '../components/ui';
 import { useDevices } from '../context/DevicesContext';
+import { getOwnership, OWNERSHIP_STATUS_CONFIG } from '../constants/ownership';
 import type { DeviceEntry } from '../types';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -201,6 +202,8 @@ export function DeviceDetailScreen() {
 
   if (!device) return null;
 
+  const ownership = getOwnership(device);
+  const ownershipCfg = OWNERSHIP_STATUS_CONFIG[ownership.status];
   const warranties = getWarranties(device);
   const estimatedValue = getEstimatedValue(device);
   const certifiedRepairs = device.repairs.filter((r) => r.certified);
@@ -227,7 +230,7 @@ export function DeviceDetailScreen() {
       },
       {
         text: "Transférer l'ObjectPass",
-        onPress: () => Alert.alert('', 'Transfert bientôt disponible'),
+        onPress: () => navigation.navigate('TransferOwnership', { deviceId: device.id }),
       },
       {
         text: "Supprimer l'appareil",
@@ -327,6 +330,14 @@ export function DeviceDetailScreen() {
             <Text style={styles.serialNumber}>
               S/N : {device.serialNumber ?? '—'}
             </Text>
+            {ownership.status !== 'none' && (
+              <View style={[styles.ownershipPill, { backgroundColor: ownershipCfg.bg }]}>
+                <View style={[styles.ownershipDot, { backgroundColor: ownershipCfg.color }]} />
+                <Text style={[styles.ownershipPillText, { color: ownershipCfg.color }]}>
+                  {ownershipCfg.label}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Health score block */}
@@ -816,6 +827,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
+  ownershipPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 10,
+  },
+  ownershipDot: { width: 6, height: 6, borderRadius: 3 },
+  ownershipPillText: { fontSize: 11, fontWeight: '700' },
 
   // ── Health score block
   healthScoreBlock: {
