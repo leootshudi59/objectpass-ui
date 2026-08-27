@@ -30,6 +30,8 @@ import {
 } from '../constants/deviceForm';
 import { PickerModal } from '../components/form/PickerModal';
 import { DatePickerModal } from '../components/form/DatePickerModal';
+import { HealthScoreBadge, OutlineButton, PrimaryButton } from '../components/ui';
+import { findClaimableDeviceBySerial, maskSerial } from '../constants/ownership';
 import { useDevices } from '../context/DevicesContext';
 import type { DeviceEntry } from '../types';
 
@@ -60,7 +62,7 @@ const sc = StyleSheet.create({
 
 export function AddDeviceScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const { addDevice } = useDevices();
+  const { devices, addDevice } = useDevices();
 
   // Step state
   const [step, setStep] = useState(1);
@@ -90,6 +92,12 @@ export function AddDeviceScreen() {
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [showDatePicker,  setShowDatePicker]  = useState(false);
   const [showHints,       setShowHints]       = useState(false);
+
+  // Demo trigger: ObjectPass has no backend, so "a device someone else already
+  // registered" is simulated by matching against the seeded mock devices — see
+  // findClaimableDeviceBySerial()'s docs (iPhone 15 Pro, S/N "DNPH7V09PKDX") for
+  // the exact value to type/scan here to trigger the detection flow.
+  const matchedDevice = step === 2 ? findClaimableDeviceBySerial(devices, serialNumber) : null;
 
   // Progress bar animation
   useEffect(() => {
@@ -659,6 +667,83 @@ export function AddDeviceScreen() {
     );
   };
 
+  // ── "ObjectPass existant détecté" — shown instead of step 2 when the typed/scanned
+  // serial number matches a device that already has an ObjectPass elsewhere. ──────
+
+  const renderExistingMatch = (matched: DeviceEntry) => {
+    const catEmoji = CATEGORIES.find((c) => c.id === matched.category)?.emoji ?? '📦';
+    const activeWarranties = matched.warrantyActive ? 1 : 0;
+    const certifiedRepairs = matched.repairs.filter((r) => r.certified).length;
+
+    return (
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.stepContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.matchIconWrap}>
+          <Feather name="alert-circle" size={28} color={Colors.diagnosticAmber} />
+        </View>
+        <Text style={styles.stepTitle}>ObjectPass existant détecté</Text>
+        <Text style={styles.stepSubtitle}>
+          Cet appareil possède déjà un passeport numérique ObjectPass actif.
+        </Text>
+
+        <View style={styles.matchCard}>
+          <View style={styles.matchRow}>
+            <View style={styles.matchPhoto}>
+              <Text style={styles.matchPhotoEmoji}>{catEmoji}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.matchName}>{matched.name}</Text>
+              <Text style={styles.matchSerial}>S/N : {maskSerial(matched.serialNumber)}</Text>
+              <View style={styles.matchMetaRow}>
+                <Text style={styles.matchMeta}>
+                  {activeWarranties} garantie{activeWarranties > 1 ? 's' : ''} active
+                  {activeWarranties > 1 ? 's' : ''}
+                </Text>
+                <Text style={styles.matchMetaDot}>·</Text>
+                <Text style={styles.matchMeta}>
+                  {certifiedRepairs} réparation{certifiedRepairs > 1 ? 's' : ''} certifiée
+                  {certifiedRepairs > 1 ? 's' : ''}
+                </Text>
+              </View>
+            </View>
+            <HealthScoreBadge score={matched.healthScore} size="medium" />
+          </View>
+        </View>
+
+        <Text style={[styles.fieldLabel, { marginTop: 24 }]}>
+          VOUS POUVEZ DEMANDER LE TRANSFERT
+        </Text>
+        <View style={styles.matchExplainCard}>
+          <Text style={styles.matchExplainIntro}>
+            Contactez le propriétaire actuel pour qu'il vous transfère cet ObjectPass. En cas
+            d'acceptation, vous recevrez :
+          </Text>
+          {[
+            'Historique des réparations certifiées',
+            'Garanties actives',
+            'Certificats de réparation',
+            'Score ObjectPass',
+          ].map((item) => (
+            <View key={item} style={styles.matchExplainRow}>
+              <View style={styles.matchExplainDot}>
+                <Feather name="check" size={11} color={Colors.cleanWhite} />
+              </View>
+              <Text style={styles.matchExplainLabel}>{item}</Text>
+            </View>
+          ))}
+          <Text style={styles.matchPrivacyNote}>
+            Les données privées de l'ancien propriétaire restent masquées.
+          </Text>
+        </View>
+
+        <View style={{ height: 32 }} />
+      </ScrollView>
+    );
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   const stepContent: Record<number, () => React.ReactNode> = {
@@ -684,9 +769,28 @@ export function AddDeviceScreen() {
           <Feather name="x" size={22} color={Colors.steelGrey} />
         </Pressable>
         <Text style={styles.headerTitle}>Ajouter un appareil</Text>
-        <Text style={styles.stepCounter}>Étape {step} / {TOTAL_STEPS}</Text>
+        {!matchedDevice && (
+          <Text style={styles.stepCounter}>Étape {step} / {TOTAL_STEPS}</Text>
+        )}
       </View>
 
+      {matchedDevice ? (
+        <>
+          {/* ── "ObjectPass existant détecté" state ──────────────────── */}
+          <View style={{ flex: 1 }}>{renderExistingMatch(matchedDevice)}</View>
+          <View style={styles.bottomArea}>
+            <PrimaryButton
+              label="Demander le transfert"
+              onPress={() => navigation.navigate('ClaimDevice', { deviceId: matchedDevice.id })}
+              fullWidth
+            />
+            <View style={{ marginTop: 10 }}>
+              <OutlineButton label="Annuler l'ajout" onPress={() => navigation.goBack()} fullWidth />
+            </View>
+          </View>
+        </>
+      ) : (
+      <>
       {/* Progress bar */}
       <View style={styles.progressTrack}>
         <Animated.View style={[styles.progressFill, { width: progressAnim }]} />
@@ -726,6 +830,8 @@ export function AddDeviceScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
+      </>
+      )}
     </SafeAreaView>
   );
 }
@@ -849,4 +955,22 @@ const styles = StyleSheet.create({
   ctaLabel:      { fontSize: 16, fontWeight: '700', color: Colors.cleanWhite },
   prevBtn:       { marginTop: 10, height: 48, borderWidth: 1.5, borderColor: Colors.objectNavy, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   prevBtnLabel:  { fontSize: 15, fontWeight: '700', color: Colors.objectNavy },
+
+  // "ObjectPass existant détecté"
+  matchIconWrap:  { width: 52, height: 52, borderRadius: 26, backgroundColor: '#FEF6E4', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  matchCard:      { backgroundColor: Colors.paperSage, borderRadius: 16, padding: 16, marginTop: 20 },
+  matchRow:       { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  matchPhoto:     { width: 52, height: 52, borderRadius: 14, backgroundColor: Colors.cleanWhite, alignItems: 'center', justifyContent: 'center' },
+  matchPhotoEmoji:{ fontSize: 26 },
+  matchName:      { fontSize: 16, fontWeight: '700', color: Colors.graphite },
+  matchSerial:    { fontSize: 12, color: Colors.steelGrey, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', marginTop: 4 },
+  matchMetaRow:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  matchMeta:      { fontSize: 12, color: Colors.steelGrey },
+  matchMetaDot:   { fontSize: 12, color: Colors.steelGrey },
+  matchExplainCard: { backgroundColor: '#EEF1FF', borderWidth: 1.5, borderColor: 'rgba(36,95,255,0.2)', borderRadius: 16, padding: 16 },
+  matchExplainIntro:{ fontSize: 13, color: Colors.graphite, lineHeight: 19, marginBottom: 12 },
+  matchExplainRow:  { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
+  matchExplainDot:  { width: 18, height: 18, borderRadius: 5, backgroundColor: Colors.warrantyGreen, alignItems: 'center', justifyContent: 'center' },
+  matchExplainLabel:{ fontSize: 13, color: Colors.graphite },
+  matchPrivacyNote: { fontSize: 12, color: Colors.steelGrey, fontStyle: 'italic', marginTop: 10, lineHeight: 17 },
 });

@@ -40,4 +40,5 @@ export type RootStackParamList = {
   Certificate: { repairId: string };
   EditDevice: { deviceId: string };
   TransferOwnership: { deviceId: string };
+  ClaimDevice: { deviceId: string };
 };

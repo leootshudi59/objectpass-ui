@@ -28,8 +28,14 @@ import {
   parseDateString,
 } from '../constants/deviceForm';
 import { DatePickerModal } from '../components/form/DatePickerModal';
-import { OutlineButton, SectionHeader } from '../components/ui';
-import { OWNERSHIP_STATUS_CONFIG, getOwnership } from '../constants/ownership';
+import { OutlineButton, PrimaryButton, SectionHeader } from '../components/ui';
+import {
+  buildClaimAcceptance,
+  buildClaimDecline,
+  findPendingClaimFor,
+  OWNERSHIP_STATUS_CONFIG,
+  getOwnership,
+} from '../constants/ownership';
 import { useDevices } from '../context/DevicesContext';
 import { useToast } from '../context/ToastContext';
 
@@ -187,6 +193,43 @@ export function EditDeviceScreen() {
 
   const handleTransfer = () => {
     navigation.navigate('TransferOwnership', { deviceId: device.id });
+  };
+
+  const handleAcceptClaim = async () => {
+    const claim = findPendingClaimFor(devices, device);
+    if (!claim) return;
+    const { sourceOwnership, claimOwnership } = buildClaimAcceptance(device, claim);
+    await updateDevice(device.id, { ownership: sourceOwnership });
+    await updateDevice(claim.id, { ownership: claimOwnership });
+    showToast('✓ Revendication acceptée — transfert terminé', 'success');
+    navigation.navigate('Tabs', { screen: 'Accueil' });
+  };
+
+  const handleDeclineClaim = () => {
+    Alert.alert(
+      'Refuser cette revendication ?',
+      "L'appareil restera dans votre ObjectPass et la demande sera marquée comme litigieuse.",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Refuser',
+          style: 'destructive',
+          onPress: async () => {
+            const claim = findPendingClaimFor(devices, device);
+            await updateDevice(device.id, { ownership: buildClaimDecline(device) });
+            if (claim) await removeDevice(claim.id);
+            showToast('Revendication refusée', 'info');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleAskInfoClaim = () => {
+    Alert.alert(
+      "Demander plus d'informations",
+      "Un message sera envoyé au demandeur pour obtenir des précisions sur sa revendication. (Fonctionnalité de démonstration)"
+    );
   };
 
   const handleArchive = () => {
@@ -484,15 +527,27 @@ export function EditDeviceScreen() {
               </View>
             </View>
 
-            {ownership.status !== 'transferred' && (
+            {ownership.status === 'claim_received' ? (
               <View style={styles.ownershipActions}>
-                <OutlineButton
-                  label={ownership.status === 'pending_sent' ? "Voir l'invitation en cours" : 'Transférer la propriété'}
-                  onPress={handleTransfer}
-                  fullWidth
-                />
-                <OutlineButton label="Archiver cet appareil" onPress={handleArchive} fullWidth />
+                <Text style={styles.claimNotice}>
+                  Un acheteur potentiel a demandé le transfert de cet appareil. Acceptez pour
+                  finaliser la vente, ou refusez si vous n'êtes pas à l'origine de cette demande.
+                </Text>
+                <PrimaryButton label="Accepter la revendication" onPress={handleAcceptClaim} fullWidth />
+                <OutlineButton label="Refuser" onPress={handleDeclineClaim} fullWidth />
+                <OutlineButton label="Demander plus d'informations" onPress={handleAskInfoClaim} fullWidth />
               </View>
+            ) : (
+              ownership.status !== 'transferred' && (
+                <View style={styles.ownershipActions}>
+                  <OutlineButton
+                    label={ownership.status === 'pending_sent' ? "Voir l'invitation en cours" : 'Transférer la propriété'}
+                    onPress={handleTransfer}
+                    fullWidth
+                  />
+                  <OutlineButton label="Archiver cet appareil" onPress={handleArchive} fullWidth />
+                </View>
+              )
             )}
           </View>
 
@@ -652,6 +707,7 @@ const styles = StyleSheet.create({
   ownershipDot:        { width: 6, height: 6, borderRadius: 3 },
   ownershipBadgeText:  { fontSize: 11, fontWeight: '700' },
   ownershipActions:    { marginTop: 16, gap: 10 },
+  claimNotice:         { fontSize: 12, color: Colors.steelGrey, lineHeight: 18, marginBottom: 4 },
 
   // Danger zone
   dangerCard:     { backgroundColor: '#FDF2F2', borderWidth: 1.5, borderColor: Colors.faultCoral },

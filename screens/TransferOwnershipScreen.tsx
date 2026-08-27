@@ -15,19 +15,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 import { Colors } from '../constants/colors';
 import { formatDate } from '../constants/deviceForm';
-import { getOwnership, OWNERSHIP_STATUS_CONFIG } from '../constants/ownership';
+import { getOwnership, maskSerial, OWNERSHIP_STATUS_CONFIG } from '../constants/ownership';
 import { HealthScoreBadge, OutlineButton, PrimaryButton, SectionHeader } from '../components/ui';
 import { useDevices } from '../context/DevicesContext';
 import { useToast } from '../context/ToastContext';
 import type { DeviceOwnership, TransferHistoryItem, TransferMethod } from '../types';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-function maskSerial(sn?: string): string {
-  if (!sn) return '—';
-  if (sn.length <= 4) return sn;
-  return '•'.repeat(sn.length - 4) + sn.slice(-4);
-}
 
 function generateTransferCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

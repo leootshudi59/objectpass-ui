@@ -17,9 +17,13 @@ interface DevicesContextValue {
   devices: DeviceEntry[];
   loading: boolean;
   newDeviceId: string | null;
-  addDevice: (device: DeviceEntry) => void;
-  updateDevice: (id: string, changes: Partial<DeviceEntry>) => void;
-  removeDevice: (id: string) => void;
+  // Return a Promise so callers that need to chain several mutations (e.g. a
+  // claim acceptance touching two devices) can `await` each one in turn —
+  // the web AsyncStorage fallback reads/writes the whole list as one blob,
+  // so two unsequenced writes race and the second silently clobbers the first.
+  addDevice: (device: DeviceEntry) => Promise<void>;
+  updateDevice: (id: string, changes: Partial<DeviceEntry>) => Promise<void>;
+  removeDevice: (id: string) => Promise<void>;
   clearNewDevice: () => void;
 }
 
@@ -74,8 +78,8 @@ export function DevicesProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, []);
 
-  const addDevice = (device: DeviceEntry): void => {
-    insertDevice(device)
+  const addDevice = (device: DeviceEntry): Promise<void> => {
+    return insertDevice(device)
       .then(() => {
         setDevices((prev) => [device, ...prev]);
         setNewDeviceId(device.id);
@@ -85,8 +89,8 @@ export function DevicesProvider({ children }: { children: React.ReactNode }) {
       });
   };
 
-  const updateDevice = (id: string, changes: Partial<DeviceEntry>): void => {
-    updateDeviceById(id, changes)
+  const updateDevice = (id: string, changes: Partial<DeviceEntry>): Promise<void> => {
+    return updateDeviceById(id, changes)
       .then(() => {
         setDevices((prev) => prev.map((d) => (d.id === id ? { ...d, ...changes } : d)));
       })
@@ -95,8 +99,8 @@ export function DevicesProvider({ children }: { children: React.ReactNode }) {
       });
   };
 
-  const removeDevice = (id: string): void => {
-    deleteDevice(id)
+  const removeDevice = (id: string): Promise<void> => {
+    return deleteDevice(id)
       .then(() => {
         setDevices((prev) => prev.filter((d) => d.id !== id));
       })

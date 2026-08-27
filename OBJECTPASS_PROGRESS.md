@@ -1,6 +1,6 @@
 # ObjectPass — Plan de développement & suivi de progression
 
-> Dernière mise à jour : 2026-08-26 (étape 23 — TransferOwnershipScreen, transfert initié par le vendeur)
+> Dernière mise à jour : 2026-08-26 (étape 24 — ClaimDeviceScreen, flow de revendication côté acheteur)
 
 ---
 
@@ -359,6 +359,39 @@ ObjectPass est le carnet de santé numérique des appareils électroniques — u
 
 **Résultat :** Le vendeur peut désormais initier un vrai transfert de propriété depuis `EditDeviceScreen`, choisir sa méthode et ses données partagées, générer une invitation mockée persistée, puis simuler l'acceptation acheteur pour démonstration. Le statut d'ownership est visible et cohérent partout (badge Propriété dans EditDeviceScreen, pill dans DeviceDetailScreen, sections dédiées dans Home). Un appareil transféré est traité exactement comme un appareil archivé côté listes actives/stats. Le flow de revendication côté acheteur (scan/saisie d'un `transferCode`, `claim_sent`/`claim_received`) reste à construire à l'étape 3/3.
 
+### Étape 24 — ClaimDeviceScreen (flow de revendication côté acheteur) + pont vendeur/acheteur
+**Prompt résumé :** Étape 3/3 (finale) du système de transfert de propriété. Construire le côté acheteur : détecter dans `AddDeviceScreen` qu'un numéro de série correspond déjà à un ObjectPass existant, bloquer l'ajout normal, proposer une demande de revendication (`ClaimDeviceScreen`), et donner au vendeur un moyen minimal d'accepter/refuser depuis `DeviceDetailScreen` et `EditDeviceScreen`. Règle produit centrale : saisir un numéro de série n'est jamais une preuve de propriété — aucun transfert automatique, uniquement une demande que l'ancien propriétaire doit valider.
+**Fichiers créés / modifiés :**
+- `/constants/ownership.ts` — ajout de la logique de revendication, réutilisable par tous les écrans concernés : `DEMO_EXISTING_OBJECTPASS_SERIAL` (constante documentée : S/N de l'iPhone 15 Pro seedé, `"DNPH7V09PKDX"`, utilisée comme déclencheur de démo puisque l'app n'a pas de backend multi-utilisateurs) ; `normalizeSerial()` et `maskSerial()` (déplacé depuis `TransferOwnershipScreen`, désormais partagé) ; `findClaimableDeviceBySerial(devices, serial)` (correspondance trim + insensible à la casse, ne matche que les appareils dont `ownership.status === 'none'` pour éviter les doubles revendications) ; `findPendingClaimFor(devices, source)` (retrouve le "clone" de revendication de l'acheteur via le numéro de série partagé) ; `buildClaimAcceptance(source, claim, buyerLabel?)` et `buildClaimDecline(source)` (construisent les objets `DeviceOwnership` résultants, réutilisés à l'identique par `ClaimDeviceScreen`, `DeviceDetailScreen` et `EditDeviceScreen`) ; `isDeviceActive()` réécrit pour se baser sur `ownership.currentOwner === 'Vous'` (au lieu de `status !== 'transferred'`) + exclusion explicite de `claim_sent` — nécessaire pour qu'un appareil revendiqué et accepté s'affiche comme actif **chez l'acheteur** tout en disparaissant chez le "vendeur" (même moteur mock), alors qu'un ancien calcul basé uniquement sur `status` aurait exclu les deux
+- `/context/DevicesContext.tsx` — `addDevice` / `updateDevice` / `removeDevice` retournent désormais une `Promise<void>` (au lieu de `void`) ; **correction d'une race condition réelle** découverte en testant ce flow : le fallback web (`AsyncStorage`) lit/écrit toute la liste des appareils comme un seul blob JSON ; deux mutations lancées en parallèle (ex. `addDevice(clone)` puis `updateDevice(source, ...)` juste après) se marchaient dessus — la deuxième écriture, basée sur une lecture antérieure à la première, effaçait silencieusement l'ajout du clone. Tous les écrans qui enchaînent plusieurs mutations (`ClaimDeviceScreen`, `EditDeviceScreen`, `DeviceDetailScreen`) `await` désormais chaque appel séquentiellement. Les appels à mutation unique (archiver, supprimer, transfert vendeur…) restent inchangés (fire-and-forget, toujours valides avec un retour `Promise` non utilisé)
+- `/screens/AddDeviceScreen.tsx` — à l'étape 2 du wizard, `matchedDevice = findClaimableDeviceBySerial(devices, serialNumber)` recalculé à chaque frappe ; si un match est trouvé, le contenu de l'étape 2 (et la barre de progression / le CTA "Continuer") est entièrement remplacé par l'état **"ObjectPass existant détecté"** : carte récap de l'appareil détecté (photo catégorie, nom, S/N masqué via `maskSerial()`, `HealthScoreBadge`, compte garanties/réparations certifiées), bloc explicatif "Vous pouvez demander le transfert" (ce que l'acheteur recevra + note de confidentialité), CTA principal "Demander le transfert" → `navigate('ClaimDevice', { deviceId })`, CTA secondaire "Annuler l'ajout" → `navigation.goBack()`. Aucun appel à `addDevice` n'a lieu dans cet état
+- `/screens/ClaimDeviceScreen.tsx` — (nouveau) écran dédié (pas une modale, `slide_from_right`), reçoit `deviceId` (l'appareil détecté) en param typé. L'état affiché est entièrement dérivé de `getOwnership(source).status` (pas de state local de navigation), donc stable après reload ou résolution côté vendeur :
+  — **État formulaire** (`status === 'none'`) : récap de l'appareil (photo, nom, S/N masqué, `HealthScoreBadge`, garanties/réparations) ; carte "Ce que vous recevrez" (historique certifié, garanties actives, certificats, score ObjectPass + note "les données privées ne vous seront jamais transmises") ; carte "Justificatifs (optionnel)" — 4 preuves mockées togglables (photo de l'appareil, preuve d'achat, capture de l'annonce, facture de revente — via `Alert` "Prendre une photo / Choisir dans la galerie", purement visuel, non persisté puisqu'il n'y a pas de backend), champ "Code de transfert reçu du vendeur" et date d'achat optionnelle (`DatePickerModal` réutilisé) ; CTA "Envoyer la demande" (mock 900ms)
+  — **Sur envoi** : création d'un `DeviceEntry` clone privé pour l'acheteur (`id: claim_${Date.now()}`, mêmes données publiques que l'appareil source — nom, catégorie, score, garanties, réparations, S/N — **sans** les champs privés de l'ancien propriétaire comme le prix ou le lieu d'achat), `ownership.status: 'claim_sent'` ; ajouté via `addDevice()` mais **invisible** dans les listes actives (`isDeviceActive` exclut `claim_sent`) — c'est ce qui permet à l'état de survivre à un reload sans jamais avoir affiché le moindre appareil supplémentaire à l'acheteur ; en parallèle, `updateDevice` sur l'appareil source passe son `ownership.status` à `claim_received` (+ entrée d'historique `received`)
+  — **État "en attente"** (`status === 'claim_received'` + clone retrouvé) : badge "Revendication envoyée", message "Demande envoyée — En attente de confirmation de l'ancien propriétaire", carte "Zone démo" avec deux boutons `PrimaryButton`/`OutlineButton` : "Simuler l'acceptation par le vendeur" (`buildClaimAcceptance` → l'appareil source part vers `currentOwner: 'Nouvel acquéreur'` + `status: 'transferred'` [quitte la liste active du vendeur, comme un transfert classique] ; le clone de l'acheteur devient `currentOwner: 'Vous'` + `status: 'transferred'` [reste actif car `isDeviceActive` se base sur `currentOwner`] → toast succès → `navigate('Tabs', { screen: 'Accueil' })`) et "Simuler le refus" (`buildClaimDecline` sur la source → `status: 'disputed'` ; `removeDevice()` sur le clone jamais montré → toast info, reste sur l'écran)
+  — **États terminaux** : `disputed` → carte "Demande refusée" avec bouton retour Accueil ; `transferred` → carte lecture seule "Ce transfert est déjà finalisé" (couvre le cas où le vendeur a résolu la revendication depuis `DeviceDetailScreen`/`EditDeviceScreen` pendant que cet écran était encore ouvert ailleurs)
+- `/navigation/types.ts` — ajout de `ClaimDevice: { deviceId: string }` dans `RootStackParamList`
+- `/navigation/MainNavigator.tsx` — import + route `ClaimDevice` ajoutée (`animation: 'slide_from_right'`, écran dédié comme `TransferOwnership`)
+- `/screens/DeviceDetailScreen.tsx` — quand `ownership.status === 'claim_received'`, une rangée d'actions apparaît sous le pill de statut dans le hero : "Accepter" (blanc), "Refuser" (bordure translucide + `Alert` de confirmation), et un bouton "?" ("Demander plus d'informations" → `Alert` mock). `handleAcceptClaim`/`handleDeclineClaim` retrouvent le clone de l'acheteur via `findPendingClaimFor` et appliquent `buildClaimAcceptance`/`buildClaimDecline` exactement comme `ClaimDeviceScreen` — accepter renvoie vers `Tabs/Accueil`, l'appareil quittant la liste active (retrouvé dans "Appareils transférés")
+- `/screens/EditDeviceScreen.tsx` — la carte "Propriété" affiche, quand `ownership.status === 'claim_received'`, un état dédié à la place des boutons Transférer/Archiver habituels : note explicative + `PrimaryButton` "Accepter la revendication" + `OutlineButton` "Refuser" + `OutlineButton` "Demander plus d'informations" (mêmes handlers/helpers que `DeviceDetailScreen`)
+- `/screens/HomeScreen.tsx` — le filtre `transferredDevices` exclut désormais aussi les appareils dont `currentOwner === 'Vous'` (sinon un appareil revendiqué avec succès par l'acheteur, dont `ownership.status` vaut littéralement `'transferred'`, se serait affiché à la fois dans la liste active *et* dans "Appareils transférés") ; badge discret `🔔 Revendication reçue` (Proof Blue) superposé sur la `DeviceCard` d'un appareil `claim_received`, pour que le "vendeur" sache qu'une action l'attend sans avoir à ouvrir chaque fiche ; le toast/badge "Nouveau ✨" piloté par `newDeviceId` ignore désormais (et efface immédiatement) les appareils non actifs — sinon l'ajout silencieux du clone `claim_sent` déclenchait un toast trompeur "✓ iPhone 15 Pro ajouté à votre ObjectPass" alors que l'appareil restait invisible pour l'acheteur (bug détecté et corrigé pendant les tests manuels)
+- `/screens/TransferOwnershipScreen.tsx` — suppression du `maskSerial()` local dupliqué, remplacé par l'import partagé depuis `constants/ownership.ts` (aucun changement de comportement)
+
+**Vérification effectuée :**
+- `npx tsc --noEmit` : zéro erreur (aucun `any`, aucun `@ts-ignore`).
+- Test end-to-end sur `expo start --web` piloté par Playwright (headless Chromium), plusieurs scénarios rejoués sur des profils de navigateur frais :
+  1. Ajout d'un appareil avec le S/N `dnph7v09pkdx` (minuscules, pour valider l'insensibilité à la casse) → état "ObjectPass existant détecté" affiché (récap iPhone 15 Pro, S/N masqué `••••••••PKDX`, score 94), aucun appareil ajouté.
+  2. "Demander le transfert" → `ClaimDeviceScreen` pré-rempli avec le bon appareil.
+  3. "Envoyer la demande" → toast "Demande de transfert envoyée" (sans toast trompeur d'ajout, cf. bug corrigé ci-dessus) → état d'attente → **reload complet** → statut persisté, Home toujours à 3 appareils avec le badge "🔔 Revendication reçue" sur l'iPhone.
+  4. Ouverture de la fiche iPhone → pill "Revendication reçue" + boutons Accepter/Refuser visibles → "Accepter" → toast succès → retour Accueil : l'iPhone d'origine apparaît sous "Appareils transférés", un **second** iPhone 15 Pro (le clone de l'acheteur, `currentOwner: 'Vous'`, badge "Transféré") apparaît dans la liste active — total toujours 3 appareils actifs → **reload complet** : tout persiste à l'identique.
+  5. Rejoué depuis zéro avec "Simuler le refus" à la place : carte "Demande refusée" affichée, Home revient à 3 appareils sans clone ajouté, fiche iPhone affiche le pill "Litige en cours" sans plus aucune action de revendication.
+  6. Carte "Propriété" d'`EditDeviceScreen` vérifiée séparément sur un appareil `claim_received` : mêmes boutons Accepter/Refuser/Demander plus d'infos que côté `DeviceDetailScreen`.
+  7. Ajout d'un appareil avec un S/N totalement inconnu (`SN-BRAND-NEW-000001`) → wizard normal inchangé (étapes 2 → 3 sans aucune détection), confirmant l'absence de régression.
+  - Zéro erreur console sur l'ensemble des scénarios. Testé uniquement sur web (natif iOS/Android non disponible dans cet environnement Windows sans émulateur) — à confirmer côté utilisateur sur un simulateur/appareil réel.
+- La race condition sur les mutations concurrentes (`addDevice` + `updateDevice` quasi simultanés) n'a été révélée que par ce test end-to-end réel — un simple `tsc --noEmit` ou une relecture de code ne l'aurait pas détectée, ce qui a justifié un test manuel complet plutôt qu'une vérification uniquement statique.
+
+**Résultat :** Le système de transfert de propriété ObjectPass est désormais complet de bout en bout (étapes 1/3, 2/3 et 3/3) : le vendeur peut initier un transfert explicite (`TransferOwnershipScreen`), et un acheteur qui tente d'ajouter un appareil déjà passeporté se voit proposer une revendication plutôt qu'un doublon silencieux (`AddDeviceScreen` → `ClaimDeviceScreen`), que le vendeur peut accepter ou refuser depuis sa propre fiche appareil. Aucun transfert n'est jamais automatique — saisir un numéro de série ne constitue jamais une preuve de propriété. Le cycle de vie complet des 6 statuts d'ownership (`none`, `pending_sent`, `claim_sent`, `claim_received`, `transferred`, `disputed`) a été exercé manuellement et est cohérent sur Home, DeviceDetailScreen et EditDeviceScreen.
+
 ## ✅ Liste de contrôle
 
 ### Design system
@@ -479,6 +512,11 @@ ObjectPass est le carnet de santé numérique des appareils électroniques — u
 - [x] `TransferOwnershipScreen` — écran dédié (récap appareil, méthode Email/QR/Lien, données partagées verrouillées/optionnelles/exclues, avertissement, génération mockée d'invitation) + état de confirmation (code copiable, QR placeholder, bouton démo "Simuler l'acceptation") ; statut d'ownership persisté via `updateDevice`, reflété dans EditDeviceScreen et DeviceDetailScreen (pill lecture seule sous le hero)
 - [x] Archivage d'un appareil (`status: 'archived'`) — masqué de la liste et des stats Home/Profil, reste accessible via une section "Appareils archivés" dédiée et son DeviceDetailScreen
 - [x] Transfert de propriété d'un appareil (`ownership.status: 'transferred'`) — masqué de la liste active et des stats Home/Profil (même traitement qu'un appareil archivé), reste accessible via une section "Appareils transférés" dédiée et son DeviceDetailScreen
+- [x] Détection "ObjectPass existant détecté" dans `AddDeviceScreen` (S/N déjà enregistré, match trim + insensible à la casse via `findClaimableDeviceBySerial`) — bloque l'ajout normal, propose "Demander le transfert" ou "Annuler l'ajout"
+- [x] `ClaimDeviceScreen` — flow complet côté acheteur : formulaire de revendication (récap, justificatifs mockés, code de transfert), envoi (`claim_sent`/`claim_received`, clone privé invisible tant que non accepté), état d'attente, boutons démo "Simuler l'acceptation" / "Simuler le refus", états terminaux (`transferred`/`disputed`)
+- [x] Bridge vendeur/acheteur — actions Accepter/Refuser/Demander plus d'infos sur un appareil `claim_received`, dans DeviceDetailScreen (hero) et EditDeviceScreen (carte Propriété)
+- [x] `isDeviceActive()` basé sur `ownership.currentOwner === 'Vous'` (+ exclusion `claim_sent`) — un appareil revendiqué et accepté est actif chez l'acheteur tout en disparaissant chez le vendeur
+- [x] Mutations `DevicesContext` (`addDevice`/`updateDevice`/`removeDevice`) awaitable (`Promise<void>`) — corrige une race condition réelle du fallback web AsyncStorage sur les mutations enchaînées
 
 ### Preuve de réparation
 - [x] `CertificateScreen` (après réparation certifiée par un réparateur)
@@ -511,11 +549,11 @@ ObjectPass est le carnet de santé numérique des appareils électroniques — u
 
 ## 📊 Pourcentage de progression
 
-**Progression globale : 85 %**
+**Progression globale : 86 %**
 
 ```
-█████████████████░░░  85 %
-(93 items complétés / 109 items totaux)
+█████████████████░░░  86 %
+(98 items complétés / 114 items totaux)
 ```
 
 | Phase | Statut | % |
@@ -568,12 +606,12 @@ ObjectPass/
 ├── constants/
 │   ├── colors.ts
 │   ├── deviceForm.ts                        ← constantes + helpers partagés AddDevice/EditDevice
-│   └── ownership.ts                         ← OWNERSHIP_STATUS_CONFIG, getOwnership() fallback, isDeviceActive() (exclut archivés + transférés)
+│   └── ownership.ts                         ← OWNERSHIP_STATUS_CONFIG, getOwnership()/isDeviceActive() (basé sur currentOwner), maskSerial/normalizeSerial, DEMO_EXISTING_OBJECTPASS_SERIAL, findClaimableDeviceBySerial, findPendingClaimFor, buildClaimAcceptance/buildClaimDecline
 ├── context/
 │   ├── AppStateContext.tsx                  ← isLoading (compteur), loadingMessage, error — setLoading/setError/clearError
 │   ├── AppointmentsContext.tsx              ← DB-first, seed au 1er lancement, loading flag, setLoading/setError global
 │   ├── AuthContext.tsx
-│   ├── DevicesContext.tsx                   ← SQLite, seed au 1er lancement, loading flag, setLoading/setError global
+│   ├── DevicesContext.tsx                   ← SQLite, seed au 1er lancement, loading flag, addDevice/updateDevice/removeDevice retournent Promise<void> (awaitable pour séquencer les mutations enchaînées)
 │   └── ToastContext.tsx                     ← ToastProvider, useToast(), showToast/hideToast
 ├── data/
 │   └── mockDevices.ts
@@ -591,19 +629,20 @@ ObjectPass/
 │   ├── AuthNavigator.tsx
 │   ├── MainNavigator.tsx
 │   ├── RootNavigator.tsx
-│   └── types.ts                             ← AuthStackParamList, MainTabParamList, RootStackParamList (+ TransferOwnership)
+│   └── types.ts                             ← AuthStackParamList, MainTabParamList, RootStackParamList (+ TransferOwnership, ClaimDevice)
 ├── package-lock.json
 ├── package.json
 ├── screens/
-│   ├── AddDeviceScreen.tsx
+│   ├── AddDeviceScreen.tsx                  ← détecte un S/N déjà passeporté à l'étape 2 (findClaimableDeviceBySerial), remplace le wizard par l'état "ObjectPass existant détecté"
 │   ├── AppointmentDetailScreen.tsx
 │   ├── AppointmentsScreen.tsx
 │   ├── BookingScreen.tsx
 │   ├── CertificateScreen.tsx
-│   ├── DeviceDetailScreen.tsx
+│   ├── ClaimDeviceScreen.tsx                 ← (nouveau) flow de revendication acheteur : formulaire + justificatifs mockés → envoi (claim_sent/claim_received) → attente → simulation acceptation/refus
+│   ├── DeviceDetailScreen.tsx                ← + actions Accepter/Refuser/Demander plus d'infos sous le pill de statut quand claim_received
 │   ├── DiagnosticScreen.tsx
-│   ├── EditDeviceScreen.tsx                 ← 7 sections dont Propriété (statut dynamique + actions Transférer/Archiver masquées si transféré) et Zone sensible
-│   ├── HomeScreen.tsx                       ← sections "Appareils archivés" + "Appareils transférés" en plus de la liste active
+│   ├── EditDeviceScreen.tsx                 ← 7 sections dont Propriété (actions Transférer/Archiver, ou Accepter/Refuser une revendication si claim_received) et Zone sensible
+│   ├── HomeScreen.tsx                       ← sections "Appareils archivés" + "Appareils transférés" + badge "🔔 Revendication reçue" sur les cartes claim_received
 │   ├── LoginScreen.tsx
 │   ├── ProfileScreen.tsx
 │   ├── QRCodeModal.tsx
@@ -617,21 +656,23 @@ ObjectPass/
 
 ## 🔮 Prochaines étapes suggérées
 
-1. **Étape 3/3 — Flow de revendication (claim)** côté acheteur — Écran de saisie/scan d'un `transferCode` (reçu par email/QR/lien depuis `TransferOwnershipScreen`), passage à `claim_sent`/`claim_received`, acceptation ou refus par le vendeur, résolution finale vers `transferred` (ou `disputed` en cas de litige) avec mise à jour de `ownership.currentOwner`. C'est le pendant réaliste du bouton démo "Simuler l'acceptation" actuel (qui reste utile pour les démos rapides sans flow acheteur complet).
+1. **Remplacer le déclencheur de démo par un vrai scan multi-appareils** — La détection "ObjectPass existant" ne matche aujourd'hui qu'un seul S/N seedé (`DEMO_EXISTING_OBJECTPASS_SERIAL`, iPhone 15 Pro) car il n'y a pas de backend multi-utilisateurs. Le jour où un vrai backend existe, `findClaimableDeviceBySerial` devra interroger une base partagée entre comptes plutôt que le `DevicesContext` local de l'utilisateur.
 
-2. **Persister les choix de données partagées** — `TransferOwnershipScreen` affiche actuellement les 3 groupes de données (verrouillées / optionnelles / exclues) mais les toggles optionnels (facture, photos, diagnostics) ne sont pas encore écrits dans `DeviceOwnership` — ils ne servent qu'à la démonstration visuelle du formulaire. À étendre `DeviceOwnership` avec un champ `sharedOptional?: string[]` si ce choix doit influencer ce que l'acheteur voit réellement (utile pour l'étape 3/3 du claim).
+2. **Persister les justificatifs et les choix de données partagées** — Les preuves mockées de `ClaimDeviceScreen` (photo, preuve d'achat, capture d'annonce, facture de revente) et les toggles optionnels de `TransferOwnershipScreen` (facture, photos, diagnostics) ne sont encore que visuels, non écrits dans `DeviceOwnership`. À étendre le modèle (ex. `sharedOptional?: string[]`, `claimEvidence?: string[]`) si ces choix doivent influencer ce que l'autre partie voit réellement.
 
-3. **Supprimer RootNavigator.tsx** — Fichier obsolète remplacé par `MainNavigator.tsx`. Vérifier qu'aucun import ne pointe encore vers lui, puis supprimer le fichier.
+3. **Vraie notification vendeur ↔ acheteur** — Le pont entre les deux côtés du claim repose aujourd'hui sur le badge "🔔 Revendication reçue" et les boutons démo "Simuler l'acceptation/le refus" — il n'y a pas de vraie notification push/email. À brancher une fois qu'un canal de notification existe.
 
-4. **Skeleton loaders sur HomeScreen et AppointmentsScreen** — Les flags `loading` de `DevicesContext` et `AppointmentsContext` sont exposés. L'overlay global gère l'hydratation, mais des skeletons spécifiques aux listes amélioreront le ressenti.
+4. **Supprimer RootNavigator.tsx** — Fichier obsolète remplacé par `MainNavigator.tsx`. Vérifier qu'aucun import ne pointe encore vers lui, puis supprimer le fichier.
 
-5. **Vrai scan caméra + upload facture** — Brancher Expo Camera (scan code-barres) et Expo Image Picker (upload facture) dans `AddDeviceScreen` et `EditDeviceScreen`, en remplacement des mocks actuels.
+5. **Skeleton loaders sur HomeScreen et AppointmentsScreen** — Les flags `loading` de `DevicesContext` et `AppointmentsContext` sont exposés. L'overlay global gère l'hydratation, mais des skeletons spécifiques aux listes amélioreront le ressenti.
 
-6. **OAuth réel** — Brancher Expo AuthSession pour Google et Apple dans `WelcomeScreen` et `LoginScreen`, en remplacement des mocks 1 200ms.
+6. **Vrai scan caméra + upload facture** — Brancher Expo Camera (scan code-barres) et Expo Image Picker (upload facture) dans `AddDeviceScreen`, `EditDeviceScreen` et les justificatifs de `ClaimDeviceScreen`, en remplacement des mocks actuels.
 
-7. **Édition du profil** — Ajouter un formulaire d'édition du nom et de la photo dans `ProfileScreen` (Expo Image Picker), en s'appuyant sur le pattern établi par `EditDeviceScreen`.
+7. **OAuth réel** — Brancher Expo AuthSession pour Google et Apple dans `WelcomeScreen` et `LoginScreen`, en remplacement des mocks 1 200ms.
 
-8. **Vraie fonctionnalité de copie presse-papiers** — `handleCopyCode`/`handleCopyLink` dans `TransferOwnershipScreen` (et `ProfileScreen` pour le wallet) affichent un toast de succès mais n'écrivent pas réellement dans le presse-papiers. Brancher `expo-clipboard`.
+8. **Édition du profil** — Ajouter un formulaire d'édition du nom et de la photo dans `ProfileScreen` (Expo Image Picker), en s'appuyant sur le pattern établi par `EditDeviceScreen`.
+
+9. **Vraie fonctionnalité de copie presse-papiers** — `handleCopyCode`/`handleCopyLink` dans `TransferOwnershipScreen` (et `ProfileScreen` pour le wallet) affichent un toast de succès mais n'écrivent pas réellement dans le presse-papiers. Brancher `expo-clipboard`.
 
 ---
 

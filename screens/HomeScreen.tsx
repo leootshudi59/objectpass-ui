@@ -37,18 +37,27 @@ export function HomeScreen() {
 
   const activeDevices     = devices.filter((d) => isDeviceActive(d));
   const archivedDevices   = devices.filter((d) => d.status === 'archived');
-  const transferredDevices = devices.filter((d) => d.status !== 'archived' && getOwnership(d).status === 'transferred');
+  const transferredDevices = devices.filter(
+    (d) => d.status !== 'archived' && getOwnership(d).status === 'transferred' && getOwnership(d).currentOwner !== 'Vous'
+  );
 
   // Stats — archived devices don't count toward active totals
   const total            = activeDevices.length;
   const repairsThisYear  = activeDevices.reduce((acc, d) => acc + d.repairs.length, 0);
   const activeWarranties = activeDevices.filter((d) => d.warrantyActive).length;
 
-  // Show toast + badge when a new device is added
+  // Show toast + badge when a new device is added — but not for a claim
+  // placeholder silently created while a claim is pending (isDeviceActive
+  // excludes it from the list, so nothing was really "added" yet from the
+  // user's point of view).
   useEffect(() => {
     if (!newDeviceId) return;
     const device = devices.find((d) => d.id === newDeviceId);
     if (!device) return;
+    if (!isDeviceActive(device)) {
+      clearNewDevice();
+      return;
+    }
 
     showToast(`✓ ${device.name} ajouté à votre ObjectPass`, 'success');
 
@@ -94,6 +103,11 @@ export function HomeScreen() {
                 {device.id === newDeviceId && (
                   <View style={styles.newBadge}>
                     <Text style={styles.newBadgeText}>Nouveau ✨</Text>
+                  </View>
+                )}
+                {getOwnership(device).status === 'claim_received' && (
+                  <View style={styles.claimBadge}>
+                    <Text style={styles.claimBadgeText}>🔔 Revendication reçue</Text>
                   </View>
                 )}
               </View>
@@ -204,6 +218,17 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   newBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.cleanWhite },
+  claimBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: Colors.proofBlue,
+    borderRadius: 99,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    zIndex: 1,
+  },
+  claimBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.cleanWhite },
 
   fab: {
     position: 'absolute',
