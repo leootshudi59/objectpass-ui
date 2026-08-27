@@ -39,4 +39,6 @@ export type RootStackParamList = {
   QRCodeModal: { deviceId: string; name: string; serialNumber?: string };
   Certificate: { repairId: string };
   EditDevice: { deviceId: string };
+  TransferOwnership: { deviceId: string };
+  ClaimDevice: { deviceId: string };
 };

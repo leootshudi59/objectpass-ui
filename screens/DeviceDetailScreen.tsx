@@ -15,6 +15,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 import { HealthScoreBadge, OutlineButton, PrimaryButton, SectionHeader } from '../components/ui';
 import { useDevices } from '../context/DevicesContext';
+import { useToast } from '../context/ToastContext';
+import {
+  buildClaimAcceptance,
+  buildClaimDecline,
+  findPendingClaimFor,
+  getOwnership,
+  OWNERSHIP_STATUS_CONFIG,
+} from '../constants/ownership';
 import type { DeviceEntry } from '../types';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -141,7 +149,8 @@ export function DeviceDetailScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'DeviceDetail'>>();
   const { deviceId } = route.params;
-  const { devices, removeDevice } = useDevices();
+  const { devices, updateDevice, removeDevice } = useDevices();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
 
   // Health bar animations
@@ -201,6 +210,8 @@ export function DeviceDetailScreen() {
 
   if (!device) return null;
 
+  const ownership = getOwnership(device);
+  const ownershipCfg = OWNERSHIP_STATUS_CONFIG[ownership.status];
   const warranties = getWarranties(device);
   const estimatedValue = getEstimatedValue(device);
   const certifiedRepairs = device.repairs.filter((r) => r.certified);
@@ -209,6 +220,42 @@ export function DeviceDetailScreen() {
 
   const handleShare = () =>
     Alert.alert("Partager l'ObjectPass", 'Fonctionnalité bientôt disponible');
+
+  const handleAcceptClaim = async () => {
+    const claim = findPendingClaimFor(devices, device);
+    if (!claim) return;
+    const { sourceOwnership, claimOwnership } = buildClaimAcceptance(device, claim);
+    await updateDevice(device.id, { ownership: sourceOwnership });
+    await updateDevice(claim.id, { ownership: claimOwnership });
+    showToast('✓ Revendication acceptée — transfert terminé', 'success');
+    navigation.navigate('Tabs', { screen: 'Accueil' });
+  };
+
+  const handleDeclineClaim = () => {
+    Alert.alert(
+      'Refuser cette revendication ?',
+      "L'appareil restera dans votre ObjectPass et la demande sera marquée comme litigieuse.",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Refuser',
+          style: 'destructive',
+          onPress: async () => {
+            const claim = findPendingClaimFor(devices, device);
+            await updateDevice(device.id, { ownership: buildClaimDecline(device) });
+            if (claim) await removeDevice(claim.id);
+            showToast('Revendication refusée', 'info');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleAskInfoClaim = () =>
+    Alert.alert(
+      "Demander plus d'informations",
+      "Un message sera envoyé au demandeur pour obtenir des précisions sur sa revendication. (Fonctionnalité de démonstration)"
+    );
 
   const handleMenu = () => {
     Alert.alert('Options', undefined, [
@@ -227,7 +274,7 @@ export function DeviceDetailScreen() {
       },
       {
         text: "Transférer l'ObjectPass",
-        onPress: () => Alert.alert('', 'Transfert bientôt disponible'),
+        onPress: () => navigation.navigate('TransferOwnership', { deviceId: device.id }),
       },
       {
         text: "Supprimer l'appareil",
@@ -327,6 +374,29 @@ export function DeviceDetailScreen() {
             <Text style={styles.serialNumber}>
               S/N : {device.serialNumber ?? '—'}
             </Text>
+            {ownership.status !== 'none' && (
+              <View style={[styles.ownershipPill, { backgroundColor: ownershipCfg.bg }]}>
+                <View style={[styles.ownershipDot, { backgroundColor: ownershipCfg.color }]} />
+                <Text style={[styles.ownershipPillText, { color: ownershipCfg.color }]}>
+                  {ownershipCfg.label}
+                </Text>
+              </View>
+            )}
+            {ownership.status === 'claim_received' && (
+              <View style={styles.claimActionsRow}>
+                <TouchableOpacity style={styles.claimAcceptBtn} onPress={handleAcceptClaim}>
+                  <Feather name="check" size={14} color={Colors.objectNavy} />
+                  <Text style={styles.claimAcceptText}>Accepter</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.claimDeclineBtn} onPress={handleDeclineClaim}>
+                  <Feather name="x" size={14} color={Colors.cleanWhite} />
+                  <Text style={styles.claimDeclineText}>Refuser</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.claimInfoBtn} onPress={handleAskInfoClaim} hitSlop={8}>
+                  <Feather name="help-circle" size={16} color={Colors.cleanWhite} />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           {/* Health score block */}
@@ -816,6 +886,41 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
+  ownershipPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 10,
+  },
+  ownershipDot: { width: 6, height: 6, borderRadius: 3 },
+  ownershipPillText: { fontSize: 11, fontWeight: '700' },
+  claimActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  claimAcceptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.cleanWhite,
+    borderRadius: 99,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  claimAcceptText: { fontSize: 12, fontWeight: '700', color: Colors.objectNavy },
+  claimDeclineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    borderRadius: 99,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  claimDeclineText: { fontSize: 12, fontWeight: '700', color: Colors.cleanWhite },
+  claimInfoBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.16)' },
 
   // ── Health score block
   healthScoreBlock: {

@@ -1,7 +1,7 @@
 // ── Device ────────────────────────────────────────────────────────────────────
 
 export type DeviceCategory = 'laptop' | 'phone' | 'ebike' | 'tablet' | 'other';
-export type DeviceStatus   = 'excellent' | 'bon' | 'attention' | 'panne';
+export type DeviceStatus   = 'excellent' | 'bon' | 'attention' | 'panne' | 'archived';
 export type PartQuality    = 'premium' | 'standard';
 
 export interface Repair {
@@ -38,6 +38,36 @@ export interface DeviceEntry extends Device {
   hasInvoice?: boolean;
   color?: string;
   createdAt?: string;
+  ownership?: DeviceOwnership;
+}
+
+// ── Ownership / Transfer ─────────────────────────────────────────────────────
+
+export type TransferStatus =
+  | 'none'
+  | 'pending_sent'
+  | 'claim_received'
+  | 'claim_sent'
+  | 'transferred'
+  | 'disputed';
+
+export type TransferMethod = 'email' | 'qr' | 'link' | 'claim';
+
+export interface TransferHistoryItem {
+  id: string;
+  event: 'sent' | 'received' | 'accepted' | 'declined' | 'completed';
+  date: string;
+  from?: string;
+  to?: string;
+  method: TransferMethod;
+}
+
+export interface DeviceOwnership {
+  currentOwner: string;
+  status: TransferStatus;
+  pendingRecipient?: string;
+  transferCode?: string;
+  history: TransferHistoryItem[];
 }
 
 // ── Repairer ──────────────────────────────────────────────────────────────────

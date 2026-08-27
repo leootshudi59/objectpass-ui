@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { useDevices } from '../context/DevicesContext';
 import { SectionHeader } from '../components/ui/SectionHeader';
 import { HealthScoreBadge } from '../components/ui/HealthScoreBadge';
+import { isDeviceActive } from '../constants/ownership';
 import type { DeviceEntry } from '../types';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -167,10 +168,12 @@ export function ProfileScreen() {
   const { devices } = useDevices();
   const user = state.user;
 
+  const activeDevices = devices.filter((d) => isDeviceActive(d));
+
   const initials     = user?.name ? getInitials(user.name) : 'OP';
-  const totalRepairs = devices.reduce((acc, d) => acc + d.repairs.length, 0);
-  const activeWarranties = devices.filter((d) => d.warrantyActive).length;
-  const certifiedRepairs = devices.reduce(
+  const totalRepairs = activeDevices.reduce((acc, d) => acc + d.repairs.length, 0);
+  const activeWarranties = activeDevices.filter((d) => d.warrantyActive).length;
+  const certifiedRepairs = activeDevices.reduce(
     (acc, d) => acc + d.repairs.filter((r) => r.certified).length,
     0,
   );
@@ -275,7 +278,7 @@ export function ProfileScreen() {
         {/* Stats strip */}
         <View style={styles.statsStrip}>
           <View style={styles.statCol}>
-            <AnimatedCounter value={devices.length} style={styles.statValue} />
+            <AnimatedCounter value={activeDevices.length} style={styles.statValue} />
             <Text style={styles.statLabel}>Appareils</Text>
           </View>
           <View style={styles.statDivider} />
@@ -307,7 +310,7 @@ export function ProfileScreen() {
           snapToInterval={152}
           decelerationRate="fast"
         >
-          {devices.map((device) => (
+          {activeDevices.map((device) => (
             <MiniDeviceCard key={device.id} device={device} />
           ))}
           <TouchableOpacity
@@ -384,7 +387,7 @@ export function ProfileScreen() {
             </View>
             <View style={styles.opInfoRow}>
               <Text style={styles.opInfoLabel}>APPAREILS LIÉS</Text>
-              <Text style={styles.opInfoValue}>{devices.length}</Text>
+              <Text style={styles.opInfoValue}>{activeDevices.length}</Text>
             </View>
             <View style={styles.opInfoRow}>
               <Text style={styles.opInfoLabel}>PREUVES ÉMISES</Text>

@@ -15,6 +15,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { DeviceCard, SectionHeader } from '../components/ui';
 import { useDevices } from '../context/DevicesContext';
 import { useToast } from '../context/ToastContext';
+import { getOwnership, isDeviceActive } from '../constants/ownership';
 
 // ── Stat strip card ────────────────────────────────────────────────────────────
 
@@ -34,16 +35,29 @@ export function HomeScreen() {
   const { devices, newDeviceId, clearNewDevice } = useDevices();
   const { showToast } = useToast();
 
-  // Stats
-  const total            = devices.length;
-  const repairsThisYear  = devices.reduce((acc, d) => acc + d.repairs.length, 0);
-  const activeWarranties = devices.filter((d) => d.warrantyActive).length;
+  const activeDevices     = devices.filter((d) => isDeviceActive(d));
+  const archivedDevices   = devices.filter((d) => d.status === 'archived');
+  const transferredDevices = devices.filter(
+    (d) => d.status !== 'archived' && getOwnership(d).status === 'transferred' && getOwnership(d).currentOwner !== 'Vous'
+  );
 
-  // Show toast + badge when a new device is added
+  // Stats — archived devices don't count toward active totals
+  const total            = activeDevices.length;
+  const repairsThisYear  = activeDevices.reduce((acc, d) => acc + d.repairs.length, 0);
+  const activeWarranties = activeDevices.filter((d) => d.warrantyActive).length;
+
+  // Show toast + badge when a new device is added — but not for a claim
+  // placeholder silently created while a claim is pending (isDeviceActive
+  // excludes it from the list, so nothing was really "added" yet from the
+  // user's point of view).
   useEffect(() => {
     if (!newDeviceId) return;
     const device = devices.find((d) => d.id === newDeviceId);
     if (!device) return;
+    if (!isDeviceActive(device)) {
+      clearNewDevice();
+      return;
+    }
 
     showToast(`✓ ${device.name} ajouté à votre ObjectPass`, 'success');
 
@@ -80,7 +94,7 @@ export function HomeScreen() {
           {/* ── Device list ───────────────────────────────────────────── */}
           <View style={styles.section}>
             <SectionHeader title="Mes appareils" action="Tout voir" />
-            {devices.map((device) => (
+            {activeDevices.map((device) => (
               <View key={device.id} style={styles.cardWrapper}>
                 <DeviceCard
                   device={device as any}
@@ -91,9 +105,44 @@ export function HomeScreen() {
                     <Text style={styles.newBadgeText}>Nouveau ✨</Text>
                   </View>
                 )}
+                {getOwnership(device).status === 'claim_received' && (
+                  <View style={styles.claimBadge}>
+                    <Text style={styles.claimBadgeText}>🔔 Revendication reçue</Text>
+                  </View>
+                )}
               </View>
             ))}
           </View>
+
+          {/* ── Archived devices ──────────────────────────────────────── */}
+          {archivedDevices.length > 0 && (
+            <View style={styles.section}>
+              <SectionHeader title="Appareils archivés" />
+              {archivedDevices.map((device) => (
+                <View key={device.id} style={styles.cardWrapper}>
+                  <DeviceCard
+                    device={device as any}
+                    onPress={() => navigation.navigate('DeviceDetail', { deviceId: device.id })}
+                  />
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* ── Transferred devices ───────────────────────────────────── */}
+          {transferredDevices.length > 0 && (
+            <View style={styles.section}>
+              <SectionHeader title="Appareils transférés" />
+              {transferredDevices.map((device) => (
+                <View key={device.id} style={styles.cardWrapper}>
+                  <DeviceCard
+                    device={device as any}
+                    onPress={() => navigation.navigate('DeviceDetail', { deviceId: device.id })}
+                  />
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
 
         {/* ── FAB ───────────────────────────────────────────────────────── */}
@@ -169,6 +218,17 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   newBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.cleanWhite },
+  claimBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: Colors.proofBlue,
+    borderRadius: 99,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    zIndex: 1,
+  },
+  claimBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.cleanWhite },
 
   fab: {
     position: 'absolute',
